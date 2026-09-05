@@ -5,11 +5,15 @@ export interface Place { id: number; name: string; region: string; latitude: num
 
 export default function LocationSearch({ onSelect, compact = false }: { onSelect: (place: Place) => void; compact?: boolean }) {
   const [query, setQuery] = useState('');
+  const [selection, setSelection] = useState<Place>();
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   const [results, setResults] = useState<Place[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (selection) { setResults([]); setError(''); setLoading(false); return; }
     if (query.trim().length < 2) { setResults([]); return; }
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
@@ -23,15 +27,15 @@ export default function LocationSearch({ onSelect, compact = false }: { onSelect
       finally { setLoading(false); }
     }, 350);
     return () => { window.clearTimeout(timer); controller.abort(); };
-  }, [query]);
+  }, [query, selection]);
 
   return <div className={`location-search ${compact ? 'compact' : ''}`}>
     <Search size={18} aria-hidden="true" />
-    <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search town or district" aria-label="Search Ghanaian town or district" autoComplete="off" />
+    <input disabled={!ready} value={query} onFocus={(event) => { if (selection) event.currentTarget.select(); }} onChange={(event) => { setSelection(undefined); setQuery(event.target.value); }} placeholder="Search town or district" aria-label="Search Ghanaian town or district" autoComplete="off" />
     {loading && <LoaderCircle className="spin" size={18} aria-label="Searching" />}
     {(results.length > 0 || error) && <div className="search-results" role="listbox">
       {error && <p>{error}</p>}
-      {results.map((place) => <button key={place.id} type="button" onClick={() => { onSelect(place); setQuery(''); setResults([]); }}>
+      {results.map((place) => <button key={place.id} type="button" onClick={() => { onSelect(place); setSelection(place); setQuery(`${place.name}, ${place.region}`); setResults([]); }}>
         <MapPin size={15} /><span><strong>{place.name}</strong><small>{place.region}</small></span>
       </button>)}
     </div>}

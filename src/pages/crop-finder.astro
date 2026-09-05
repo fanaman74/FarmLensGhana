@@ -1,0 +1,8 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import CropFinder from '../components/crops/CropFinder';
+---
+<AppLayout title="Find crops by location">
+  <header class="page-head"><p class="eyebrow">Location-first imagery search</p><h1 class="page-title">Find the land.<br/>Explore the crop.</h1><p class="page-intro">Search a Ghanaian town or district and choose a crop. Explore 2025 cropland and recent satellite acquisition dates, with crop-type predictions kept separate from the baseline map.</p></header>
+  <CropFinder client:load />
+</AppLayout>

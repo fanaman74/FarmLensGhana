@@ -2,6 +2,7 @@ import { Activity, Droplets, FlaskConical, Layers3, ThermometerSun } from 'lucid
 import FarmMap from '../map/FarmMap';
 import LocationSearch, { type Place } from '../dashboard/LocationSearch';
 import { useWeather } from '../weather/useWeather';
+import MonthlyOutlook from './MonthlyOutlook';
 
 const initial = { name: 'Kumasi', region: 'Ashanti', latitude: 6.6885, longitude: -1.6244 };
 
@@ -40,6 +41,7 @@ export default function SoilWorkspace() {
         </>}
       </section>
     </div>
+    <MonthlyOutlook location={state.location} />
     <section className="soil-bottom">
       <div className="panel panel-pad unavailable-card"><div className="ndmi-orb">NDMI</div><div><h3>Vegetation water-stress layer</h3><p>Connect Sentinel Hub to calculate cloud-masked NDMI for a drawn field. No index is being inferred from weather data.</p><a className="btn" href="/settings#integrations">Configure provider</a></div></div>
       <div className="panel panel-pad disclaimer-card"><FlaskConical/><div><h3>Use field evidence too</h3><p>These are weather-model estimates for an area, not direct sensor readings or laboratory results. Check soil by hand, inspect roots and drainage, and use laboratory testing for nutrient or pH decisions.</p></div></div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { WeatherData } from '../../lib/types';
+import { fetchWeather } from '../../lib/api/fetchWeather';
 
 export interface ActiveLocation { name: string; region?: string; latitude: number; longitude: number; }
 
@@ -13,26 +14,33 @@ export function useWeather(initial: ActiveLocation) {
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
-    const saved = localStorage.getItem('farmlens-location');
-    if (saved) {
-      try { setLocationState(JSON.parse(saved)); } catch { /* Ignore malformed visitor preference. */ }
-    }
+    try {
+      const saved = JSON.parse(localStorage.getItem('farmlens-location') ?? 'null');
+      if (saved && typeof saved.name === 'string' && Number.isFinite(saved.latitude) && Number.isFinite(saved.longitude) && saved.latitude >= 4.5 && saved.latitude <= 11.5 && saved.longitude >= -3.5 && saved.longitude <= 1.5) setLocationState(saved);
+    } catch { /* Storage is optional; preserve the working default. */ }
   }, []);
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true); setError(''); setWeather(null);
-    fetch(`/api/weather?latitude=${location.latitude}&longitude=${location.longitude}`, { signal: controller.signal })
-      .then(async (response) => { const result = await response.json(); if (!response.ok || !result.ok) throw new Error(result.error?.message ?? 'Weather unavailable'); return result; })
-      .then((result) => { setWeather(result.data); setSource(result.source); setUpdatedAt(result.fetchedAt); })
-      .catch((cause) => { if ((cause as Error).name !== 'AbortError') setError((cause as Error).message); })
+    fetchWeather(location.latitude, location.longitude, controller.signal)
+      .then((result) => { if (!controller.signal.aborted) { setWeather(result.data); setSource(result.source); setUpdatedAt(result.fetchedAt); } })
+      .catch((cause) => { if (!controller.signal.aborted) setError((cause as Error).message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [location.latitude, location.longitude, revision]);
 
+  useEffect(() => {
+    if (!error) return;
+    const recover = () => setRevision(value => value + 1);
+    window.addEventListener('online', recover);
+    window.addEventListener('focus', recover);
+    return () => { window.removeEventListener('online', recover); window.removeEventListener('focus', recover); };
+  }, [error]);
+
   const setLocation = (next: ActiveLocation) => {
     setLocationState(next);
-    localStorage.setItem('farmlens-location', JSON.stringify(next));
+    try { localStorage.setItem('farmlens-location', JSON.stringify(next)); } catch { /* Browsing without persistent storage is supported. */ }
   };
 
   return { location, setLocation, weather, source, updatedAt, loading, error, retry: () => setRevision((value) => value + 1) };
