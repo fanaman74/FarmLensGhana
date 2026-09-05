@@ -1,0 +1,2 @@
+import { defineConfig, devices } from '@playwright/test';
+export default defineConfig({ testDir: './e2e', webServer: { command: 'node node_modules/astro/bin/astro.mjs dev --host 127.0.0.1', env: { ASTRO_TELEMETRY_DISABLED: '1' }, url: 'http://127.0.0.1:4321', reuseExistingServer: true, timeout: 120_000 }, use: { baseURL: 'http://127.0.0.1:4321', trace: 'on-first-retry' }, projects: [{ name: 'desktop', use: { ...devices['Desktop Chrome'] } }, { name: 'mobile', use: { ...devices['Pixel 7'] } }] });

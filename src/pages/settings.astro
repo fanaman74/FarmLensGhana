@@ -1,0 +1,8 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import SettingsWorkspace from '../components/settings/SettingsWorkspace';
+---
+<AppLayout title="Settings">
+  <header class="page-head"><p class="eyebrow">Settings</p><h1 class="page-title">Your view.<br/>Secure connections.</h1><p class="page-intro">Visitor preferences stay in this browser. Provider credentials and connection tests remain behind administrator access on the server.</p></header>
+  <SettingsWorkspace client:load />
+</AppLayout>

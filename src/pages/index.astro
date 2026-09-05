@@ -1,0 +1,23 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import HomeDashboard from '../components/dashboard/HomeDashboard';
+import { crops } from '../data/crops';
+const quickLinks = [
+  { href: '/weather', icon: '☁', title: 'Weather', text: 'Hourly rain and 7-day outlook' },
+  { href: '/soil', icon: '◒', title: 'Soil', text: 'Moisture and temperature estimates' },
+  { href: '/crops', icon: '✿', title: 'Crops', text: 'Local growing guidance' },
+  { href: '/satellite', icon: '⌖', title: 'Satellite', text: 'Draw and inspect your field' },
+  { href: '/settings', icon: '⚙', title: 'Settings', text: 'Preferences and integrations' }
+];
+---
+<AppLayout>
+  <HomeDashboard client:load />
+  <section class="home-section">
+    <div class="section-heading"><div><p class="eyebrow">Move from signal to action</p><h2>Everything in one field kit</h2></div></div>
+    <div class="quick-grid">{quickLinks.map((item) => <a href={item.href} class="quick-card panel"><span>{item.icon}</span><div><h3>{item.title}</h3><p>{item.text}</p></div><b>→</b></a>)}</div>
+  </section>
+  <section class="home-section">
+    <div class="section-heading"><div><p class="eyebrow">Popular in Ghana</p><h2>Crop guides built for quick decisions</h2><p>Reference ranges are clearly labelled and should be checked against local extension advice.</p></div><a class="btn" href="/crops">View all crops</a></div>
+    <div class="home-crops">{crops.slice(0, 5).map((crop) => <a href={`/crops/${crop.slug}`} class="home-crop panel"><span style={`background:${crop.colour}`}>{crop.icon}</span><div><h3>{crop.name}</h3><p>{crop.scientificName}</p></div><b>↗</b></a>)}</div>
+  </section>
+</AppLayout>

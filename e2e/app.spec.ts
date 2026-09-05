@@ -1,0 +1,4 @@
+import { test, expect } from '@playwright/test';
+test('navigates crop library and detail', async ({ page }) => { await page.goto('/crops'); await expect(page.getByRole('heading', {name:/Know the crop/i})).toBeVisible(); await page.getByPlaceholder(/Search common/i).fill('maize'); await page.getByRole('link', {name:/Maize/i}).click(); await expect(page.getByRole('heading',{name:'Maize',exact:true})).toBeVisible(); });
+test('satellite field scan explains unavailable provider', async ({ page }) => { await page.goto('/satellite'); await page.getByRole('button',{name:/Field Scan/i}).click(); await expect(page.getByText(/not configured/i)).toBeVisible(); await expect(page.getByRole('button',{name:/Draw a boundary/i})).toBeDisabled(); });
+test('settings protects integration status', async ({ page }) => { await page.goto('/settings'); await expect(page.getByRole('heading',{name:'Administrator access'})).toBeVisible(); });

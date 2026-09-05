@@ -1,0 +1,26 @@
+---
+import { APP } from '../config';
+const { pathname } = Astro.url;
+const links = [
+  ['/', 'Overview'], ['/weather', 'Weather'], ['/soil', 'Soil'], ['/crops', 'Crops'], ['/satellite', 'Satellite'], ['/settings', 'Settings']
+];
+---
+<header class="topbar">
+  <a class="brand" href="/" aria-label={`${APP.name} home`}>
+    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 19c8 0 13-5.2 14-14-8.8.2-14 5-14 12 0 .7.1 1.3.2 2Z" fill="currentColor"/><path d="M5.5 20c2.8-5.2 6-8.1 10.2-10.4" stroke="#f4f1de" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+    <span>{APP.name}</span>
+  </a>
+  <button class="menu-button" id="menu-button" aria-controls="primary-nav" aria-expanded="false">Menu</button>
+  <nav class="nav" id="primary-nav" aria-label="Primary navigation">
+    {links.map(([href, label]) => <a href={href} aria-current={pathname === href || (href !== '/' && pathname.startsWith(href)) ? 'page' : undefined}>{label}</a>)}
+  </nav>
+</header>
+<script>
+  const button = document.querySelector<HTMLButtonElement>('#menu-button');
+  const nav = document.querySelector<HTMLElement>('#primary-nav');
+  button?.addEventListener('click', () => {
+    const open = button.getAttribute('aria-expanded') !== 'true';
+    button.setAttribute('aria-expanded', String(open));
+    nav?.setAttribute('data-open', String(open));
+  });
+</script>

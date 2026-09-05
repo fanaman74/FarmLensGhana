@@ -1,0 +1,9 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import CropLibrary from '../../components/crops/CropLibrary';
+---
+<AppLayout title="Crop library">
+  <header class="page-head"><p class="eyebrow">Ghana crop library</p><h1 class="page-title">Know the crop.<br/>Respect the field.</h1><p class="page-intro">Search practical starting points for ten important Ghanaian crops. Broad reference ranges are not a substitute for variety-specific extension advice.</p></header>
+  <p class="provider-note">Draft crop reference data: quantitative ranges and local names are unverified seed placeholders. Do not use them to select crops, irrigation amounts or planting dates until source records and rainfall periods have been checked.</p>
+  <CropLibrary client:load />
+</AppLayout>

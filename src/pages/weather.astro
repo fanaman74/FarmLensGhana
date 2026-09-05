@@ -1,0 +1,8 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import WeatherWorkspace from '../components/weather/WeatherWorkspace';
+---
+<AppLayout title="Weather">
+  <header class="page-head"><p class="eyebrow">Weather for field work</p><h1 class="page-title">Plan around the sky,<br/>not promises.</h1><p class="page-intro">Search anywhere in Ghana for current conditions, hourly rain signals, evapotranspiration and a seven-day forecast with transparent farming rules.</p></header>
+  <WeatherWorkspace client:load />
+</AppLayout>

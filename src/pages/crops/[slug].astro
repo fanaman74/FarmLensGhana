@@ -1,0 +1,22 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import CropWeatherCard from '../../components/crops/CropWeatherCard';
+import { cropBySlug } from '../../data/crops';
+const crop = cropBySlug(Astro.params.slug!);
+if (!crop) return Astro.redirect('/crops');
+---
+<AppLayout title={crop.name} description={`${crop.name} growing guidance and current weather context for Ghana.`}>
+  <a class="back-link" href="/crops">← Crop library</a>
+  <p class="provider-note">Draft reference: crop values and local names below await source verification. Rainfall period is unverified; these placeholders must not be used for agronomic decisions.</p>
+  <header class="crop-detail-hero panel" style={`--crop-color:${crop.colour}`}>
+    <div class="crop-detail-copy"><p class="eyebrow">{crop.category} · Ghana guide</p><h1>{crop.name}</h1><p class="scientific">{crop.scientificName}</p><p>{crop.summary}</p><div class="local-names">{crop.localNames.map((name) => <span>{name}</span>)}</div></div>
+    <div class="crop-detail-art"><span>{crop.icon}</span></div>
+  </header>
+  <div class="crop-detail-grid">
+    <section class="panel panel-pad crop-profile"><div class="section-heading"><div><h2>Growing profile</h2><p>Broad reference guidance—confirm for your variety.</p></div></div><dl><div><dt>Temperature</dt><dd>{crop.temperature[0]}–{crop.temperature[1]}°C</dd></div><div><dt>Annual rainfall</dt><dd>{crop.rainfall[0]}–{crop.rainfall[1]} mm</dd></div><div><dt>Preferred pH</dt><dd>{crop.ph[0]}–{crop.ph[1]}</dd></div><div><dt>Soil</dt><dd>{crop.soil}</dd></div></dl><div class="guide-block"><h3>Planting</h3><p>{crop.planting}</p></div><div class="guide-block"><h3>Harvest</h3><p>{crop.harvest}</p></div></section>
+    <CropWeatherCard crop={crop} client:load />
+    <section class="panel panel-pad crop-risks"><div class="section-heading"><div><h2>Risks to watch</h2><p>Scout early and seek local diagnosis.</p></div></div><ul>{crop.risks.map((risk) => <li><span>!</span>{risk}</li>)}</ul><a class="btn btn-primary" href={`/satellite?crop=${crop.slug}`}>Open in Satellite Explorer</a></section>
+    <section class="panel panel-pad production-panel"><div><p class="eyebrow">National context</p><h2>Ghana production trends</h2><p>FAOSTAT values are intentionally not shown until an official dataset update has been verified. National statistics must not be read as farm measurements.</p></div><div class="empty-chart"><span>FAOSTAT</span><b>Verified series pending</b><small>No placeholder values</small></div></section>
+  </div>
+  <div class="source-bar source-panel"><span><strong>Agronomy notes:</strong> {crop.source}</span><span><strong>Limitation:</strong> General guidance, not a guaranteed suitability assessment.</span></div>
+</AppLayout>

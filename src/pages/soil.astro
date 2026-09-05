@@ -1,0 +1,8 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import SoilWorkspace from '../components/soil/SoilWorkspace';
+---
+<AppLayout title="Soil insights">
+  <header class="page-head"><p class="eyebrow">Modelled soil insights</p><h1 class="page-title">Read beneath<br/>the surface.</h1><p class="page-intro">Explore weather-model soil moisture and temperature beside rainfall and crop water demand. Always confirm important decisions in the field.</p></header>
+  <SoilWorkspace client:load />
+</AppLayout>

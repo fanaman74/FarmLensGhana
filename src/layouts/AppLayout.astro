@@ -1,0 +1,36 @@
+---
+import '../styles/global.css';
+import SiteHeader from '../components/SiteHeader.astro';
+import { APP } from '../config';
+interface Props { title?: string; description?: string; }
+const { title, description = APP.description } = Astro.props;
+const pageTitle = title ? `${title} · ${APP.name}` : APP.name;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="theme-color" content="#0b2419" />
+    <meta name="description" content={description} />
+    <title>{pageTitle}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <SiteHeader />
+      <main class="main"><slot /></main>
+      <footer class="footer">
+        <div><strong>{APP.name}</strong> · Guidance, not a guarantee. Inspect conditions before acting.</div>
+        <div class="footer-links">
+          <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>
+          <a href="https://www.fao.org/faostat/en/" target="_blank" rel="noreferrer">FAOSTAT</a>
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a>
+          <a href="/settings">Data & privacy</a>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
