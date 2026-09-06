@@ -1,9 +1,8 @@
 ---
 import AppLayout from '../layouts/AppLayout.astro';
 import SatelliteExplorer from '../components/map/SatelliteExplorer';
-import { secret } from '../lib/security/secrets';
 ---
 <AppLayout title="Satellite Explorer">
   <header class="satellite-heading"><div><p class="eyebrow">Satellite Crop Explorer</p><h1>See the field from above.</h1></div><p>Draw a boundary, choose one trusted provider and keep every result tied to its date, quality and limitations.</p></header>
-  <SatelliteExplorer sentinelConfigured={Boolean(secret('SENTINEL_HUB_CLIENT_ID') && secret('SENTINEL_HUB_CLIENT_SECRET'))} client:load />
+  <SatelliteExplorer client:load />
 </AppLayout>

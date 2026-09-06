@@ -8,8 +8,8 @@ This is an application foundation, not yet the complete production release descr
 
 Known remaining work:
 
-- Satellite Catalog now uses real server-side OAuth and the documented Sentinel Hub search endpoint. Rendering, statistics, imagery overlays, and durable farm persistence are unfinished.
-- AgroMonitoring and AppEEARS are scaffolded; authenticated field processing and research tasks are not implemented.
+- Satellite browsing uses the free Earth Search catalogue and Google Earth Engine layers. Rendering, statistics, imagery overlays, and durable farm persistence are unfinished.
+- NASA AppEEARS is scaffolded; authenticated research tasks are not implemented.
 - OlmoEarth authentication testing exists, but model validation, inference and prediction overlays remain disabled. Environment-managed credentials are read-only in the UI; no encrypted database editing workflow is implemented.
 - Crop agronomy ranges and local names are unverified seed placeholders. Compatibility scoring is disabled pending source verification. FAOSTAT has no verified data extract.
 - Unit and provider preferences are persisted but not yet consistently applied to every view. Reduced-motion preference is not yet fully wired to map animations.
@@ -48,7 +48,7 @@ Open `http://localhost:4321`.
 
 Copy `.env.example` and add only the providers you intend to use. No secret uses a `PUBLIC_` prefix and no provider credential is sent to browser code.
 
-The app remains useful without optional credentials. Open-Meteo does not require a key. Sentinel Hub, AgroMonitoring, NASA AppEEARS, and OlmoEarth show clear setup states when unavailable.
+The app remains useful without optional credentials. Open-Meteo does not require a key. NASA AppEEARS and OlmoEarth/OpenRouter show clear setup states when unavailable.
 
 ### Administrator access
 
@@ -109,7 +109,5 @@ Deploy behind HTTPS. Set all secrets in the host's managed secret store. Use a d
 - [Astro documentation](https://docs.astro.build/)
 - [Open-Meteo forecast API](https://open-meteo.com/en/docs)
 - [FAOSTAT](https://www.fao.org/faostat/en/)
-- [Sentinel Hub APIs](https://docs.sentinel-hub.com/api/latest/)
-- [AgroMonitoring API](https://agromonitoring.com/api)
 - [NASA AppEEARS](https://appeears.earthdatacloud.nasa.gov/api/)
 - [OlmoEarth documentation](https://docs.olmoearth.allenai.org/)

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarDays, Cloud, Info, Layers3, Map as MapIcon, Satellite, ScanLine, Sparkles } from 'lucide-react';
+import { BarChart3, CalendarDays, Cloud, Info, Layers3, Map as MapIcon, ScanLine, Sparkles } from 'lucide-react';
 import FarmMap from './FarmMap';
 import LocationSearch, { type Place } from '../dashboard/LocationSearch';
 import { crops } from '../../data/crops';
@@ -8,12 +8,10 @@ type Mode = 'crop' | 'scan' | 'ai';
 type View = 'map' | 'analytics';
 
 const providers = [
-  { id: 'sentinel', label: 'Sentinel Hub', note: 'Interactive imagery', ready: false },
-  { id: 'agro', label: 'AgroMonitoring', note: 'Field monitoring', ready: false },
-  { id: 'nasa', label: 'NASA AppEEARS', note: 'Historical research', ready: false },
+  { id: 'earth-search', label: 'Earth Search', note: 'Free Sentinel-2 catalogue', ready: true },
 ];
 
-export default function SatelliteExplorer({ sentinelConfigured = false }: { sentinelConfigured?: boolean }) {
+export default function SatelliteExplorer() {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     setReady(true);
@@ -25,11 +23,10 @@ export default function SatelliteExplorer({ sentinelConfigured = false }: { sent
   const [location, setLocation] = useState({ name: 'Ghana', region: 'National view', latitude: 7.9465, longitude: -1.0232 });
   const [polygon, setPolygon] = useState<number[][]>([]);
   const [cropSlug, setCropSlug] = useState('maize');
-  const [provider, setProvider] = useState('sentinel');
+  const [provider, setProvider] = useState('earth-search');
   const [layer, setLayer] = useState('true-colour');
   const [clouds, setClouds] = useState(30);
   const crop = useMemo(() => crops.find((item) => item.slug === cropSlug)!, [cropSlug]);
-  const providerInfo = { ...providers.find((item) => item.id === provider)!, ready: provider === 'sentinel' && sentinelConfigured };
 
   return <div className="satellite-app">
     <div className="satellite-toolbar">
@@ -48,7 +45,7 @@ export default function SatelliteExplorer({ sentinelConfigured = false }: { sent
       </section>
       <aside className={`satellite-panel panel panel-pad ${view === 'map' ? 'mobile-sheet' : ''}`}>
         {mode === 'crop' && <CropMode crop={crop} cropSlug={cropSlug} setCropSlug={setCropSlug} polygon={polygon} />}
-        {mode === 'scan' && <ScanMode provider={provider} setProvider={setProvider} layer={layer} setLayer={setLayer} clouds={clouds} setClouds={setClouds} providerInfo={providerInfo} polygon={polygon} />}
+        {mode === 'scan' && <ScanMode provider={provider} setProvider={setProvider} layer={layer} setLayer={setLayer} clouds={clouds} setClouds={setClouds} polygon={polygon} />}
         {mode === 'ai' && <AiMode polygon={polygon} />}
       </aside>
     </div>
@@ -65,17 +62,13 @@ function CropMode({ crop, cropSlug, setCropSlug, polygon }: any) { return <>
   <a className="btn btn-primary full-btn" href={`/crops/${crop.slug}`}>Open complete crop guide</a>
 </>; }
 
-function ScanMode({ provider, setProvider, layer, setLayer, clouds, setClouds, providerInfo, polygon }: any) {
+function ScanMode({ provider, setProvider, layer, setLayer, clouds, setClouds, polygon }: any) {
   const [from, setFrom] = useState(dateOffset(-30)), [to, setTo] = useState(dateOffset(0));
   const [processing, setProcessing] = useState(false), [message, setMessage] = useState('');
-  const [scenes, setScenes] = useState<{ id: string; acquiredAt: string; cloudCover: number | null; satellite: string; resolutionMetres: number }[]>([]);
   const scan = async () => {
-    setProcessing(true); setMessage(''); setScenes([]);
+    setProcessing(true); setMessage('');
     try {
-      const response = await fetch('/api/satellite/catalog', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ geometry: { type: 'Polygon', coordinates: [polygon] }, from, to, cloudsMax: clouds }) });
-      const data = await response.json();
-      if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : data.error?.message ?? 'Scene search failed.');
-      setScenes(data.data); setMessage(data.data.length ? `${data.data.length} scenes found. Metadata only; rendering is not yet available.` : 'No imagery found for these dates and cloud limits.');
+      setMessage('Use Crop Finder for the free recent Sentinel-2 catalogue. Paid provider processing has been removed.');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Scene search failed.'); }
     finally { setProcessing(false); }
   };
@@ -86,11 +79,10 @@ function ScanMode({ provider, setProvider, layer, setLayer, clouds, setClouds, p
   <label className="label" htmlFor="layer">Layer</label><select id="layer" className="input" value={layer} onChange={(e) => setLayer(e.target.value)}><option value="true-colour">True colour</option><option value="false-colour">False colour</option><option value="ndvi">NDVI · vegetation vigour</option><option value="evi">EVI · enhanced vegetation</option><option value="ndmi">NDMI · canopy moisture</option><option value="ndwi">NDWI · surface water</option></select>
   <label className="range-label" htmlFor="clouds"><span><Cloud/>Maximum cloud cover</span><b>{clouds}%</b></label><input id="clouds" className="range" type="range" min="0" max="80" value={clouds} onChange={(e) => setClouds(Number(e.target.value))}/>
   <div className="scan-checks"><span className={polygon.length ? 'ready' : ''}>{polygon.length ? '✓' : '1'} Boundary {polygon.length ? 'ready' : 'needed'}</span><span>2 Provider credentials</span><span>3 Imagery search</span></div>
-  <p className="meta">Searching sends your boundary to Sentinel Hub. Boundaries stay in this browser until you request processing.</p>
-  <button className="btn btn-primary full-btn" onClick={scan} disabled={!polygon.length || !providerInfo.ready || processing}>{processing ? 'Searching imagery…' : !polygon.length ? 'Draw a boundary to continue' : providerInfo.ready ? 'Search available scenes' : `${providerInfo.label} needs configuration`}</button>
-  {!providerInfo.ready && <div className="provider-note"><Satellite/><p><strong>{providerInfo.label} is not configured.</strong> Add server-side credentials in Settings. No imagery or statistics have been fabricated.</p></div>}
+  <p className="meta">Free catalogue search is available on Crop Finder. Boundaries stay in this browser.</p>
+  <button className="btn btn-primary full-btn" onClick={scan} disabled={!polygon.length || processing}>{processing ? 'Checking catalogue…' : !polygon.length ? 'Draw a boundary to continue' : 'Open free recent catalogue'}</button>
+  <a className="btn btn-ghost full-btn" href="/crop-finder">Open Crop Finder</a>
   <p role="status" className="meta">{message}</p>
-  {scenes.map((scene) => <article className="notice" key={scene.id}><Satellite size={18}/><div><h4>{scene.satellite}</h4><p>{scene.acquiredAt} · {scene.resolutionMetres} m · cloud {scene.cloudCover ?? 'unknown'}%</p><p>Provider: Sentinel Hub · L2A · metadata ready. Scene cloud cover does not guarantee clear pixels over this farm.</p></div></article>)}
 </>; }
 
 function AiMode({ polygon }: { polygon: number[][] }) { return <>
