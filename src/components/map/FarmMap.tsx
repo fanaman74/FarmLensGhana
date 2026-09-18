@@ -4,6 +4,14 @@ import { Crosshair, Layers3, Minus, Plus, RotateCcw } from 'lucide-react';
 import { validateFarmPolygon } from '../../lib/geo/geojson';
 type FeatureCollection = Extract<Parameters<GeoJSONSource['setData']>[0], { type: 'FeatureCollection' }>;
 
+export interface FarmBoundarySummary {
+  coordinates: number[][];
+  areaHectares: number;
+  perimeterKm: number;
+  vertexCount: number;
+  centroid: { latitude: number; longitude: number };
+}
+
 interface Props {
   latitude: number;
   longitude: number;
@@ -14,6 +22,7 @@ interface Props {
   rasterLayer?: { tileUrl: string; bounds: number[]; title: string } | null;
   onLocation?: (latitude: number, longitude: number) => void;
   onPolygon?: (coordinates: number[][]) => void;
+  onFinish?: (summary: FarmBoundarySummary | null) => void;
 }
 
 const imageryStyle = {
@@ -22,7 +31,17 @@ const imageryStyle = {
   layers: [{ id: 'imagery', type: 'raster' as const, source: 'imagery' }]
 };
 
-export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false, highlights, cropland = false, rasterLayer, onLocation, onPolygon }: Props) {
+function distanceKm(a: number[], b: number[]) {
+  const radians = (value: number) => value * Math.PI / 180;
+  const dLat = radians(b[1] - a[1]);
+  const dLon = radians(b[0] - a[0]);
+  const latA = radians(a[1]);
+  const latB = radians(b[1]);
+  const haversine = Math.sin(dLat / 2) ** 2 + Math.cos(latA) * Math.cos(latB) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false, highlights, cropland = false, rasterLayer, onLocation, onPolygon, onFinish }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -35,8 +54,8 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
   const [drawMessage, setDrawMessage] = useState('');
   const [screenPoints, setScreenPoints] = useState<number[][]>([]);
   const [screenCursor, setScreenCursor] = useState<number[] | null>(null);
-  const callbacks = useRef({ onLocation, onPolygon, highlights });
-  callbacks.current = { onLocation, onPolygon, highlights };
+  const callbacks = useRef({ onLocation, onPolygon, onFinish, highlights });
+  callbacks.current = { onLocation, onPolygon, onFinish, highlights };
 
   useEffect(() => {
     if (!container.current || mapRef.current) return;
@@ -122,7 +141,17 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
     const ring = [...pointsRef.current, pointsRef.current[0]];
     const result = validateFarmPolygon({ type: 'Polygon', coordinates: [ring] }, { min: .01, max: 3000 });
     if (!result.ok) { setDrawMessage(result.message); return; }
+    const vertices = ring.slice(0, -1);
+    const centroid = vertices.reduce((point, [longitude, latitude]) => ({ longitude: point.longitude + longitude, latitude: point.latitude + latitude }), { longitude: 0, latitude: 0 });
+    const summary: FarmBoundarySummary = {
+      coordinates: ring,
+      areaHectares: result.areaHectares,
+      perimeterKm: ring.slice(0, -1).reduce((total, point, index) => total + distanceKm(point, ring[index + 1]), 0),
+      vertexCount: vertices.length,
+      centroid: { latitude: centroid.latitude / vertices.length, longitude: centroid.longitude / vertices.length },
+    };
     callbacks.current.onPolygon?.(ring);
+    callbacks.current.onFinish?.(summary);
     setDrawMessage(`Boundary saved · approximately ${result.areaHectares.toFixed(2)} hectares. Not a surveyed measurement.`);
     if (mapRef.current) { updatePolygon(mapRef.current, pointsRef.current); mapRef.current.getCanvas().style.cursor = ''; mapRef.current.doubleClickZoom.enable(); }
     setIsDrawing(false);
@@ -135,6 +164,7 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
     setIsDrawing(true);
     setDrawMessage('Click or tap each corner to connect boundary lines. Use Finish to close the area.');
     callbacks.current.onPolygon?.([]);
+    callbacks.current.onFinish?.(null);
     if (mapRef.current) { mapRef.current.getCanvas().style.cursor = 'crosshair'; mapRef.current.doubleClickZoom.disable(); }
     if (container.current) container.current.dataset.drawing = 'true';
     if (mapRef.current) updatePolygon(mapRef.current, []);
@@ -148,7 +178,8 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
     if (mapRef.current) { mapRef.current.getCanvas().style.cursor = ''; mapRef.current.doubleClickZoom.enable(); }
     if (container.current) container.current.dataset.drawing = '';
     if (mapRef.current) updatePolygon(mapRef.current, []);
-    onPolygon?.([]);
+    callbacks.current.onPolygon?.([]);
+    callbacks.current.onFinish?.(null);
   };
 
   const locate = () => navigator.geolocation?.getCurrentPosition((position) => onLocation?.(position.coords.latitude, position.coords.longitude));

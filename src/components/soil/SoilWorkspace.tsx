@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Activity, Droplets, FlaskConical, Layers3, ThermometerSun } from 'lucide-react';
-import FarmMap from '../map/FarmMap';
+import FarmMap, { type FarmBoundarySummary } from '../map/FarmMap';
+import BoundarySummary from '../map/BoundarySummary';
 import LocationSearch, { type Place } from '../dashboard/LocationSearch';
 import { useWeather } from '../weather/useWeather';
 import MonthlyOutlook from './MonthlyOutlook';
@@ -8,6 +10,7 @@ const initial = { name: 'Kumasi', region: 'Ashanti', latitude: 6.6885, longitude
 
 export default function SoilWorkspace() {
   const state = useWeather(initial);
+  const [boundary, setBoundary] = useState<FarmBoundarySummary | null>(null);
   const currentHour = state.weather?.hourly.find((hour) => hour.time >= state.weather!.current.time.slice(0,13) + ':00');
   const rain7 = state.weather?.daily.reduce((sum, day) => sum + day.rainfall, 0) ?? 0;
   const et7 = state.weather?.daily.reduce((sum, day) => sum + day.et0, 0) ?? 0;
@@ -19,7 +22,7 @@ export default function SoilWorkspace() {
   return <div className="soil-workspace">
     <div className="weather-toolbar panel panel-pad"><LocationSearch onSelect={(place: Place) => state.setLocation(place)} /><span className="chip"><span className="chip-dot"/> Model estimate</span></div>
     <div className="soil-grid">
-      <section className="soil-map panel"><FarmMap latitude={state.location.latitude} longitude={state.location.longitude} drawing onLocation={(latitude, longitude) => state.setLocation({ name: 'Selected field', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude })} /></section>
+      <section className="soil-map panel"><FarmMap latitude={state.location.latitude} longitude={state.location.longitude} drawing onFinish={setBoundary} onPolygon={(coordinates) => { if (!coordinates.length) setBoundary(null); }} onLocation={(latitude, longitude) => state.setLocation({ name: 'Selected field', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude })} /></section>
       <section className="panel panel-pad soil-insights">
         <div className="section-heading"><div><p className="eyebrow">Near {state.location.name}</p><h2>Root-zone snapshot</h2><p>Modelled conditions—not field sensors.</p></div></div>
         {state.loading && <div className="skeleton sk-lg"/>}
@@ -41,6 +44,7 @@ export default function SoilWorkspace() {
         </>}
       </section>
     </div>
+    {boundary && <BoundarySummary boundary={boundary} title={`Boundary ready near ${state.location.name}`} />}
     <MonthlyOutlook location={state.location} />
     <section className="soil-bottom">
       <div className="panel panel-pad unavailable-card"><div className="ndmi-orb">NDMI</div><div><h3>Vegetation water-stress layer</h3><p>Use Google Earth Engine to calculate cloud-masked NDMI for a drawn field. No index is being inferred from weather data.</p><a className="btn" href="/settings#integrations">Configure Earth Engine</a></div></div>

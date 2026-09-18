@@ -16,10 +16,12 @@ const isCurrent = (href: string) => pathname === href || (href !== '/' && pathna
   <button class="menu-button" id="menu-button" aria-controls="primary-nav" aria-expanded="false">Menu</button>
   <nav class="nav" id="primary-nav" aria-label="Primary navigation">
     <a class="nav-overview" href="/" aria-current={isCurrent('/') ? 'page' : undefined}>Overview</a>
-    {groups.map((group) => <div class="nav-group">
-      <span class="nav-group-label">{group.label}</span>
-      {group.links.map(([href, label]) => <a href={href} aria-current={isCurrent(href) ? 'page' : undefined}>{label}</a>)}
-    </div>)}
+    {groups.map((group) => <details class="nav-dropdown">
+      <summary>{group.label}</summary>
+      <div class="nav-dropdown-menu">
+        {group.links.map(([href, label]) => <a href={href} aria-current={isCurrent(href) ? 'page' : undefined}>{label}</a>)}
+      </div>
+    </details>)}
   </nav>
 </header>
 <script>

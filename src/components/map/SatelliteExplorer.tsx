@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, CalendarDays, Cloud, Info, Layers3, Map as MapIcon, ScanLine, Sparkles } from 'lucide-react';
-import FarmMap from './FarmMap';
+import FarmMap, { type FarmBoundarySummary } from './FarmMap';
+import BoundarySummary from './BoundarySummary';
 import LocationSearch, { type Place } from '../dashboard/LocationSearch';
 import { crops } from '../../data/crops';
 
@@ -18,6 +19,7 @@ export default function SatelliteExplorer() {
   const [view, setView] = useState<View>('map');
   const [location, setLocation] = useState({ name: 'Ghana', region: 'National view', latitude: 7.9465, longitude: -1.0232 });
   const [polygon, setPolygon] = useState<number[][]>([]);
+  const [boundary, setBoundary] = useState<FarmBoundarySummary | null>(null);
   const [cropSlug, setCropSlug] = useState('maize');
   const [clouds, setClouds] = useState(30);
   const crop = useMemo(() => crops.find((item) => item.slug === cropSlug)!, [cropSlug]);
@@ -33,7 +35,7 @@ export default function SatelliteExplorer() {
     </div>
     <div className="satellite-grid">
       <section className={`satellite-map panel ${view === 'analytics' ? 'mobile-hidden' : ''}`}>
-        <FarmMap latitude={location.latitude} longitude={location.longitude} zoom={6.4} drawing onPolygon={setPolygon} onLocation={(latitude, longitude) => setLocation({ name: 'Selected point', region: 'Ghana', latitude, longitude })}/>
+        <FarmMap latitude={location.latitude} longitude={location.longitude} zoom={6.4} drawing onPolygon={(coordinates) => { setPolygon(coordinates); if (!coordinates.length) setBoundary(null); }} onFinish={setBoundary} onLocation={(latitude, longitude) => setLocation({ name: 'Selected point', region: 'Ghana', latitude, longitude })}/>
         <div className="map-search-float"><LocationSearch compact onSelect={(place: Place) => setLocation(place)} /></div>
         <div className="imagery-status"><div><strong>Esri satellite basemap</strong><small>Analysis layer not requested</small></div></div>
       </section>
@@ -43,6 +45,7 @@ export default function SatelliteExplorer() {
         {mode === 'ai' && <AiMode polygon={polygon} />}
       </aside>
     </div>
+    {boundary && <BoundarySummary boundary={boundary} title={`Boundary ready near ${location.name}`} />}
   </div>;
 }
 

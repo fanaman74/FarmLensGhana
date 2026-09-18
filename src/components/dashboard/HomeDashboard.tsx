@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { ArrowRight, CloudRain, Droplets, Gauge, Leaf, Navigation, Wind } from 'lucide-react';
 import FarmMap from '../map/FarmMap';
-import LocationSearch, { type Place } from './LocationSearch';
 import { useWeather } from '../weather/useWeather';
 import { weatherIcon, weatherLabel, formatDay } from '../weather/weatherUtils';
 import { buildAdvisories } from '../../lib/agriculture/advisoryRules';
@@ -10,8 +8,6 @@ const initial = { name: 'Kumasi', region: 'Ashanti', latitude: 6.6885, longitude
 
 export default function HomeDashboard() {
   const { location, setLocation, weather, source, updatedAt, loading, error, retry } = useWeather(initial);
-  const [searchCollapsed, setSearchCollapsed] = useState(false);
-  const choose = (place: Place) => { setLocation(place); setSearchCollapsed(true); };
   const current = weather?.current;
   const today = weather?.daily[0];
   const notices = buildAdvisories(weather?.daily ?? []);
@@ -23,9 +19,6 @@ export default function HomeDashboard() {
         <div className="eyebrow">Field intelligence for Ghana</div>
         <h1>See what your land<br />is telling you.</h1>
         <p>Local forecasts, modelled soil conditions and satellite context—together in one calm view.</p>
-      </div>
-      <div className={`map-overlay home-search${searchCollapsed ? ' home-search-collapsed' : ''}`}>
-        <LocationSearch onSelect={choose} compact={searchCollapsed} />
       </div>
       <div className="map-overlay map-location"><Navigation size={14} /><span>{location.name}<small>{location.region}</small></span></div>
     </section>
