@@ -340,3 +340,56 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
 .earth-engine-panel { margin: 20px 0; padding: 16px; border: 1px solid #42624d; border-radius: 12px; }
 @media (max-width: 760px) { .finder-map { position: relative; top: 0; height: 540px; min-height: 540px; } .finder-form { grid-template-columns: 1fr; } .finder-form > button { margin-top: 0; } .draw-help { bottom: 135px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* Information architecture */
+.nav { align-items: center; gap: 11px; }
+.nav-overview { color: #f4f1de !important; }
+.nav-group { display: flex; align-items: center; gap: 2px; }
+.nav-group-label { margin-right: 2px; color: #718879; font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+.workflow-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.workflow-card { min-height: 190px; display: flex; flex-direction: column; align-items: flex-start; gap: 18px; padding: 18px; transition: transform .18s ease, border-color .18s ease; }
+.workflow-card > span { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 9px; color: #102519; background: #b8ef65; font-size: 10px; font-weight: 800; }
+.workflow-card h3 { margin: 0; font-size: 16px; letter-spacing: -.025em; }
+.workflow-card p { margin: 6px 0 0; color: #91a695; font-size: 12px; line-height: 1.55; }
+.workflow-card > b { margin-top: auto; color: #b8ef65; font-size: 18px; }
+.workflow-card:hover { transform: translateY(-3px); border-color: rgba(184,239,101,.38); }
+.home-guide .section-heading > div > p:last-child { max-width: 670px; }
+.service-jobs { margin: 5px 0 28px; }
+.service-job-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.service-job { min-height: 190px; }
+.service-number { display: inline-grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; color: #102519; background: #b8ef65; font-size: 10px; font-weight: 800; }
+.service-job h3 { margin: 21px 0 7px; font-size: 17px; letter-spacing: -.025em; }
+.service-job p { min-height: 55px; margin: 0 0 15px; color: #91a695; font-size: 12px; line-height: 1.55; }
+.service-table-panel { margin-top: 12px; }
+.service-table-wrap { overflow-x: auto; }
+.service-table { width: 100%; min-width: 920px; border-collapse: collapse; text-align: left; }
+.service-table th, .service-table td { padding: 17px 12px; border-top: 1px solid rgba(173,205,184,.12); vertical-align: top; color: #cbd5c7; font-size: 12px; line-height: 1.5; }
+.service-table thead th { padding-top: 0; color: #819687; border-top: 0; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.service-table tbody th { width: 19%; color: #f4f1de; font-size: 14px; }
+.service-table tbody th small { display: block; margin-top: 6px; color: #819687; font-size: 10px; font-weight: 400; line-height: 1.45; }
+.service-table ul { display: flex; flex-wrap: wrap; gap: 5px; max-width: 260px; margin: 0; padding: 0; list-style: none; }
+.service-table li { padding: 4px 7px; border-radius: 6px; color: #b8c8b9; background: rgba(184,239,101,.07); font-size: 10px; }
+.service-availability { display: inline-flex; align-items: center; gap: 6px; color: #b8ef65; white-space: nowrap; }
+.service-availability > span { display: grid; width: 17px; height: 17px; place-items: center; border-radius: 4px; color: #102519; background: #54d58b; font-size: 11px; font-weight: 900; }
+.service-stars { color: #f0b562; letter-spacing: 2px; white-space: nowrap; }
+.service-stars i { color: #415749; font-style: normal; }
+.service-notes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.service-note h3 { margin: 0; font-size: 15px; }
+.service-note > p:last-child { margin: 8px 0 0; color: #91a695; font-size: 11px; line-height: 1.55; }
+@media (max-width: 1100px) {
+  .nav { gap: 5px; }
+  .nav-group-label { display: none; }
+  .workflow-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 920px) {
+  .nav { align-items: stretch; gap: 2px; }
+  .nav-overview { margin-bottom: 4px; }
+  .nav-group { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding-top: 4px; border-top: 1px solid rgba(173,205,184,.1); }
+  .nav-group-label { display: block; padding: 7px 13px 3px; }
+  .nav-group a { padding: 9px 13px; }
+  .service-job-grid, .service-notes { grid-template-columns: 1fr; }
+}
+@media (max-width: 540px) {
+  .workflow-grid { grid-template-columns: 1fr; }
+  .workflow-card { min-height: 0; }
+}

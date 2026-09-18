@@ -1,0 +1,47 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import { services } from '../data/services';
+
+const jobs = [
+  { number: '01', title: 'Monitor crop and land change', text: 'Use vegetation, cropland and Sentinel imagery to compare what is changing across a field or region.', service: 'Digital Earth Africa' },
+  { number: '02', title: 'Plan water use', text: 'Use evapotranspiration, biomass and water-productivity layers to frame irrigation questions.', service: 'FAO WaPOR' },
+  { number: '03', title: 'Start a 10 m crop analysis', text: 'Use seasonal cropland and active-cropping products as a documented starting layer.', service: 'ESA WorldCereal' },
+];
+---
+<AppLayout title="Data services">
+  <header class="page-head">
+    <p class="eyebrow">Data services</p>
+    <h1 class="page-title">Choose the source<br/>for the question.</h1>
+    <p class="page-intro">A practical guide to external Earth-observation and water-data services that can extend FarmLens Ghana. Start with the job you need to do, then check coverage, licensing and access before relying on a layer.</p>
+  </header>
+
+  <section class="service-jobs" aria-labelledby="service-jobs-title">
+    <div class="section-heading"><div><p class="eyebrow">Start with a job</p><h2 id="service-jobs-title">What are you trying to understand?</h2></div></div>
+    <div class="service-job-grid">
+      {jobs.map((job) => <article class="service-job panel panel-pad"><span class="service-number">{job.number}</span><h3>{job.title}</h3><p>{job.text}</p><span class="chip"><span class="chip-dot" />{job.service}</span></article>)}
+    </div>
+  </section>
+
+  <section class="panel panel-pad service-table-panel" aria-labelledby="service-comparison-title">
+    <div class="section-heading"><div><p class="eyebrow">Compare platforms</p><h2 id="service-comparison-title">What each service can provide</h2><p>These are reference integrations, not a claim that every layer is currently connected in FarmLens.</p></div><span class="chip">3 services reviewed</span></div>
+    <div class="service-table-wrap">
+      <table class="service-table">
+        <thead><tr><th scope="col">Platform</th><th scope="col">Useful for</th><th scope="col">Resolution</th><th scope="col">Ghana</th><th scope="col">Access</th><th scope="col">Fit</th></tr></thead>
+        <tbody>
+          {services.map((service) => <tr>
+            <th scope="row"><strong>{service.name}</strong><small>{service.summary}</small></th>
+            <td><ul>{service.provides.map((item) => <li>{item}</li>)}</ul></td>
+            <td>{service.resolution}</td>
+            <td><span class="service-availability"><span aria-hidden="true">✓</span>{service.ghana}</span></td>
+            <td>{service.access}</td>
+            <td><span class="service-stars" aria-label={`${service.fit} out of 5 stars`}>{'★'.repeat(service.fit)}<i>{'★'.repeat(5 - service.fit)}</i></span></td>
+          </tr>)}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="service-notes" aria-label="Service notes">
+    {services.map((service) => <article class="panel panel-pad service-note"><p class="eyebrow">{service.shortName}</p><h3>{service.bestFor}</h3><p>{service.caveat}</p></article>)}
+  </section>
+</AppLayout>

@@ -2,22 +2,40 @@
 import AppLayout from '../layouts/AppLayout.astro';
 import HomeDashboard from '../components/dashboard/HomeDashboard';
 import { crops } from '../data/crops';
+
+const workflow = [
+  { number: '01', href: '/weather', title: 'Check the weather', text: 'See current conditions, hourly rain and seven-day field-work signals for a Ghanaian location.' },
+  { number: '02', href: '/soil', title: 'Read soil conditions', text: 'Review modelled root-zone moisture, soil temperature and water demand before acting.' },
+  { number: '03', href: '/satellite', title: 'Inspect the field from above', text: 'Search recent satellite scenes or draw a field boundary for a careful imagery review.' },
+  { number: '04', href: '/crop-finder', title: 'Match a place to a crop', text: 'Combine a location, crop guide and available map layers without treating estimates as proof.' },
+];
 const quickLinks = [
-  { href: '/weather', icon: '☁', title: 'Weather', text: 'Hourly rain and 7-day outlook' },
-  { href: '/soil', icon: '◒', title: 'Soil', text: 'Moisture and temperature estimates' },
-  { href: '/crops', icon: '✿', title: 'Crops', text: 'Local growing guidance' },
-  { href: '/satellite', icon: '⌖', title: 'Satellite', text: 'Draw and inspect your field' },
-  { href: '/settings', icon: '⚙', title: 'Settings', text: 'Preferences and integrations' }
+  { href: '/weather', icon: '☁', title: 'Weather', text: 'Forecast and rain signals' },
+  { href: '/soil', icon: '◒', title: 'Soil', text: 'Moisture and temperature' },
+  { href: '/satellite', icon: '⌖', title: 'Satellite Explorer', text: 'Scenes and field boundaries' },
+  { href: '/crop-finder', icon: '✿', title: 'Crop Finder', text: 'Location-first crop review' },
+  { href: '/crops', icon: '▦', title: 'Crop Library', text: 'Guides and reference notes' },
+  { href: '/services', icon: '◈', title: 'Data Services', text: 'Compare external platforms' },
+  { href: '/settings', icon: '⚙', title: 'Settings', text: 'Preferences and connections' },
 ];
 ---
-<AppLayout>
+<AppLayout title="Field dashboard">
   <HomeDashboard client:load />
-  <section class="home-section">
-    <div class="section-heading"><div><p class="eyebrow">Move from signal to action</p><h2>Everything in one field kit</h2></div></div>
-    <div class="quick-grid">{quickLinks.map((item) => <a href={item.href} class="quick-card panel"><span>{item.icon}</span><div><h3>{item.title}</h3><p>{item.text}</p></div><b>→</b></a>)}</div>
+
+  <section class="home-section home-guide" aria-labelledby="home-guide-title">
+    <div class="section-heading"><div><p class="eyebrow">A simple field workflow</p><h2 id="home-guide-title">Start with the question you have.</h2><p>Each workspace has one job. Pick a starting point, choose a Ghanaian location, and keep the data limits visible as you work.</p></div></div>
+    <div class="workflow-grid">
+      {workflow.map((item) => <a href={item.href} class="workflow-card panel"><span>{item.number}</span><div><h3>{item.title}</h3><p>{item.text}</p></div><b aria-hidden="true">→</b></a>)}
+    </div>
   </section>
-  <section class="home-section">
-    <div class="section-heading"><div><p class="eyebrow">Popular in Ghana</p><h2>Crop guides built for quick decisions</h2><p>Reference ranges are clearly labelled and should be checked against local extension advice.</p></div><a class="btn" href="/crops">View all crops</a></div>
-    <div class="home-crops">{crops.slice(0, 5).map((crop) => <a href={`/crops/${crop.slug}`} class="home-crop panel"><span style={`background:${crop.colour}`}>{crop.icon}</span><div><h3>{crop.name}</h3><p>{crop.scientificName}</p></div><b>↗</b></a>)}</div>
+
+  <section class="home-section" aria-labelledby="toolkit-title">
+    <div class="section-heading"><div><p class="eyebrow">All workspaces</p><h2 id="toolkit-title">Keep the next step obvious.</h2><p>Use these pages to move from signal to a documented next action.</p></div><a class="btn" href="/services">Review data services</a></div>
+    <div class="quick-grid">{quickLinks.map((item) => <a href={item.href} class="quick-card panel"><span aria-hidden="true">{item.icon}</span><div><h3>{item.title}</h3><p>{item.text}</p></div><b aria-hidden="true">→</b></a>)}</div>
+  </section>
+
+  <section class="home-section" aria-labelledby="crop-guides-title">
+    <div class="section-heading"><div><p class="eyebrow">Popular in Ghana</p><h2 id="crop-guides-title">Crop guides for a useful first pass.</h2><p>Reference ranges are clearly labelled and should be checked against local extension advice.</p></div><a class="btn" href="/crops">View crop library</a></div>
+    <div class="home-crops">{crops.slice(0, 5).map((crop) => <a href={`/crops/${crop.slug}`} class="home-crop panel"><span style={`background:${crop.colour}`}>{crop.icon}</span><div><h3>{crop.name}</h3><p>{crop.scientificName}</p></div><b aria-hidden="true">↗</b></a>)}</div>
   </section>
 </AppLayout>

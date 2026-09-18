@@ -1,9 +1,12 @@
 ---
 import { APP } from '../config';
 const { pathname } = Astro.url;
-const links = [
-  ['/', 'Overview'], ['/weather', 'Weather'], ['/soil', 'Soil'], ['/crops', 'Crops'], ['/crop-finder', 'Find crops'], ['/satellite', 'Satellite'], ['/settings', 'Settings']
+const groups = [
+  { label: 'Monitor', links: [['/weather', 'Weather'], ['/soil', 'Soil']] },
+  { label: 'Explore', links: [['/satellite', 'Satellite'], ['/crop-finder', 'Crop finder'], ['/crops', 'Crop library']] },
+  { label: 'Reference', links: [['/services', 'Data services'], ['/settings', 'Settings']] },
 ];
+const isCurrent = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href));
 ---
 <header class="topbar">
   <a class="brand" href="/" aria-label={`${APP.name} home`}>
@@ -12,7 +15,11 @@ const links = [
   </a>
   <button class="menu-button" id="menu-button" aria-controls="primary-nav" aria-expanded="false">Menu</button>
   <nav class="nav" id="primary-nav" aria-label="Primary navigation">
-    {links.map(([href, label]) => <a href={href} aria-current={pathname === href || (href !== '/' && pathname.startsWith(href)) ? 'page' : undefined}>{label}</a>)}
+    <a class="nav-overview" href="/" aria-current={isCurrent('/') ? 'page' : undefined}>Overview</a>
+    {groups.map((group) => <div class="nav-group">
+      <span class="nav-group-label">{group.label}</span>
+      {group.links.map(([href, label]) => <a href={href} aria-current={isCurrent(href) ? 'page' : undefined}>{label}</a>)}
+    </div>)}
   </nav>
 </header>
 <script>
