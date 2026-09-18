@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, CalendarDays, Cloud, Info, Layers3, Map as MapIcon, ScanLine, Sparkles } from 'lucide-react';
 import FarmMap from './FarmMap';
 import LocationSearch, { type Place } from '../dashboard/LocationSearch';
@@ -6,10 +6,6 @@ import { crops } from '../../data/crops';
 
 type Mode = 'crop' | 'scan' | 'ai';
 type View = 'map' | 'analytics';
-
-const providers = [
-  { id: 'earth-search', label: 'Earth Search', note: 'Free Sentinel-2 catalogue', ready: true },
-];
 
 export default function SatelliteExplorer() {
   const [ready, setReady] = useState(false);
@@ -23,8 +19,6 @@ export default function SatelliteExplorer() {
   const [location, setLocation] = useState({ name: 'Ghana', region: 'National view', latitude: 7.9465, longitude: -1.0232 });
   const [polygon, setPolygon] = useState<number[][]>([]);
   const [cropSlug, setCropSlug] = useState('maize');
-  const [provider, setProvider] = useState('earth-search');
-  const [layer, setLayer] = useState('true-colour');
   const [clouds, setClouds] = useState(30);
   const crop = useMemo(() => crops.find((item) => item.slug === cropSlug)!, [cropSlug]);
 
@@ -45,7 +39,7 @@ export default function SatelliteExplorer() {
       </section>
       <aside className={`satellite-panel panel panel-pad ${view === 'map' ? 'mobile-sheet' : ''}`}>
         {mode === 'crop' && <CropMode crop={crop} cropSlug={cropSlug} setCropSlug={setCropSlug} polygon={polygon} />}
-        {mode === 'scan' && <ScanMode provider={provider} setProvider={setProvider} layer={layer} setLayer={setLayer} clouds={clouds} setClouds={setClouds} polygon={polygon} />}
+        {mode === 'scan' && <ScanMode location={location} clouds={clouds} setClouds={setClouds} polygon={polygon} />}
         {mode === 'ai' && <AiMode polygon={polygon} />}
       </aside>
     </div>
@@ -62,27 +56,41 @@ function CropMode({ crop, cropSlug, setCropSlug, polygon }: any) { return <>
   <a className="btn btn-primary full-btn" href={`/crops/${crop.slug}`}>Open complete crop guide</a>
 </>; }
 
-function ScanMode({ provider, setProvider, layer, setLayer, clouds, setClouds, polygon }: any) {
+function ScanMode({ location, clouds, setClouds, polygon }: { location: { name: string; region: string; latitude: number; longitude: number }; clouds: number; setClouds: (value: number) => void; polygon: number[][] }) {
   const [from, setFrom] = useState(dateOffset(-30)), [to, setTo] = useState(dateOffset(0));
   const [processing, setProcessing] = useState(false), [message, setMessage] = useState('');
+  const [scenes, setScenes] = useState<{ id: string; date: string; cloud: number | null }[]>();
+  const requestRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    setProcessing(false); setScenes(undefined); setMessage('');
+    return () => requestRef.current?.abort();
+  }, [location.latitude, location.longitude, from, to, clouds]);
   const scan = async () => {
-    setProcessing(true); setMessage('');
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setProcessing(true); setMessage(''); setScenes(undefined);
     try {
-      setMessage('Use Crop Finder for the free recent Sentinel-2 catalogue. Paid provider processing has been removed.');
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'Scene search failed.'); }
-    finally { setProcessing(false); }
+      const response = await fetch('/api/satellite/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ latitude: location.latitude, longitude: location.longitude, from, to, cloud: clouds }), signal: controller.signal });
+      const data: unknown = await response.json().catch(() => null);
+      if (!response.ok || !data || typeof data !== 'object' || !('scenes' in data) || !Array.isArray(data.scenes)) throw new Error(data && typeof data === 'object' && 'error' in data && typeof data.error === 'string' ? data.error : 'Satellite catalogue unavailable. Retry shortly.');
+      if (requestRef.current === controller) setScenes(data.scenes as { id: string; date: string; cloud: number | null }[]);
+    } catch (error) { if (!(error instanceof DOMException && error.name === 'AbortError') && requestRef.current === controller) setMessage(error instanceof Error ? error.message : 'Satellite catalogue unavailable. Retry shortly.'); }
+    finally { if (requestRef.current === controller) { requestRef.current = null; setProcessing(false); } }
   };
   return <>
-  <p className="eyebrow">Field scan</p><h2 className="panel-title">Inspect vegetation over time</h2><p className="panel-subtitle">Draw a field, choose a source and request only the layer you need.</p>
-  <label className="label" htmlFor="provider">Imagery provider</label><select id="provider" className="input" value={provider} onChange={(e) => setProvider(e.target.value)}>{providers.map((item) => <option value={item.id} key={item.id}>{item.label} · {item.note}</option>)}</select>
+  <p className="eyebrow">Field scan</p><h2 className="panel-title">Find recent satellite scenes</h2><p className="panel-subtitle">Search the free Sentinel-2 catalogue for {location.name}.</p>
+  <p className="meta">Catalogue records only: results are not rendered as imagery or used to identify crops. Clicking Search sends the selected coordinates ({location.latitude.toFixed(3)}, {location.longitude.toFixed(3)}), date range and cloud threshold to Element 84 Earth Search. The drawn boundary stays in this browser and is not sent to the catalogue. Results cover only the small ~4 km × 4 km window around the selected point, not national Ghana coverage.</p>
   <div className="form-grid"><label><span className="label"><CalendarDays/>From</span><input className="input" type="date" value={from} onChange={(event) => setFrom(event.target.value)}/></label><label><span className="label"><CalendarDays/>To</span><input className="input" type="date" value={to} onChange={(event) => setTo(event.target.value)}/></label></div>
-  <label className="label" htmlFor="layer">Layer</label><select id="layer" className="input" value={layer} onChange={(e) => setLayer(e.target.value)}><option value="true-colour">True colour</option><option value="false-colour">False colour</option><option value="ndvi">NDVI · vegetation vigour</option><option value="evi">EVI · enhanced vegetation</option><option value="ndmi">NDMI · canopy moisture</option><option value="ndwi">NDWI · surface water</option></select>
   <label className="range-label" htmlFor="clouds"><span><Cloud/>Maximum cloud cover</span><b>{clouds}%</b></label><input id="clouds" className="range" type="range" min="0" max="80" value={clouds} onChange={(e) => setClouds(Number(e.target.value))}/>
-  <div className="scan-checks"><span className={polygon.length ? 'ready' : ''}>{polygon.length ? '✓' : '1'} Boundary {polygon.length ? 'ready' : 'needed'}</span><span>2 Provider credentials</span><span>3 Imagery search</span></div>
-  <p className="meta">Free catalogue search is available on Crop Finder. Boundaries stay in this browser.</p>
-  <button className="btn btn-primary full-btn" onClick={scan} disabled={!polygon.length || processing}>{processing ? 'Checking catalogue…' : !polygon.length ? 'Draw a boundary to continue' : 'Open free recent catalogue'}</button>
-  <a className="btn btn-ghost full-btn" href="/crop-finder">Open Crop Finder</a>
-  <p role="status" className="meta">{message}</p>
+  <div className="scan-checks"><span className="ready">✓ Location selected</span><span className={polygon.length ? 'ready' : ''}>{polygon.length ? '✓ Boundary retained locally' : 'Boundary optional'}</span><span>Sentinel-2 L2A · Earth Search</span></div>
+  <button className="btn btn-primary full-btn" onClick={scan} disabled={processing}>{processing ? 'Searching catalogue…' : 'Search catalogue'}</button>
+  {processing && <p role="status" className="meta">Checking Earth Search for matching scenes…</p>}
+  {!processing && message && <p role="alert" className="meta">{message}</p>}
+  {!processing && scenes && scenes.length === 0 && <p role="status" className="meta">No matching scenes found for these dates and cloud limit.</p>}
+  {!processing && scenes && scenes.length > 0 && <div className="provider-note"><strong>{scenes.length} catalogue scene{scenes.length === 1 ? '' : 's'} found</strong>{scenes.map((scene) => <p className="meta" key={scene.id}><strong>{new Date(scene.date).toLocaleDateString('en-GH')}</strong> · cloud {scene.cloud == null ? 'unknown' : `${scene.cloud.toFixed(0)}%`}<br/>{scene.id}</p>)}</div>}
 </>; }
 
 function AiMode({ polygon }: { polygon: number[][] }) { return <>

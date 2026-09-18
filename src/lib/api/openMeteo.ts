@@ -32,15 +32,27 @@ const geocodeSchema = z.object({
 });
 
 const cache = new Map<string, { expires: number; data: unknown }>();
+const CACHE_TTL_MS = 10 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 200;
+
+function pruneCache(now = Date.now()) {
+  for (const [key, entry] of cache) if (entry.expires <= now) cache.delete(key);
+}
 
 async function fetchJson(url: URL, timeoutMs = 9000): Promise<unknown> {
   const key = url.toString();
+  pruneCache();
   const cached = cache.get(key);
   if (cached && cached.expires > Date.now()) return cached.data;
   const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs), headers: { Accept: 'application/json', 'User-Agent': 'FarmLens-Ghana/0.1' } });
   if (!response.ok) throw new Error(`Upstream returned ${response.status}`);
   const data: unknown = await response.json();
-  cache.set(key, { expires: Date.now() + 10 * 60 * 1000, data });
+  pruneCache();
+  if (!cache.has(key) && cache.size >= MAX_CACHE_ENTRIES) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+  cache.set(key, { expires: Date.now() + CACHE_TTL_MS, data });
   return data;
 }
 

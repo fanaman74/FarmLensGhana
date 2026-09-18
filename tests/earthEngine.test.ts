@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import { validateEarthRequest } from '../src/lib/earthEngine/request';
 import { serviceAccountCredentials } from '../src/lib/earthEngine/credentials';
+vi.mock('@google/earthengine', () => ({ default: { data: {} } }));
 const input = { kind: 'annual', latitude: 6.68, longitude: -1.62, from: '2026-08-01', to: '2026-09-01', threshold: .65 };
 describe('Earth Engine request boundaries', () => {
   test('builds a location-aligned small AOI', () => { const result = validateEarthRequest(input); expect(result.geometry.coordinates[0]).toHaveLength(5); expect(result.bounds[0]).toBeLessThan(-1.62); expect(result.bounds[2]).toBeGreaterThan(-1.62); });
