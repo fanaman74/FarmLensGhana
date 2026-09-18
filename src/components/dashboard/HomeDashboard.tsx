@@ -19,12 +19,12 @@ export default function HomeDashboard() {
   return <div className="dashboard-shell">
     <section className="map-stage panel">
       <FarmMap latitude={location.latitude} longitude={location.longitude} onLocation={(latitude, longitude) => setLocation({ name: 'Selected field', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude })} />
-      <div className={`map-overlay intro-card${searchCollapsed ? ' intro-card-collapsed' : ''}`}>
-        {!searchCollapsed && <>
-          <div className="eyebrow">Field intelligence for Ghana</div>
-          <h1>See what your land<br />is telling you.</h1>
-          <p>Local forecasts, modelled soil conditions and satellite context—together in one calm view.</p>
-        </>}
+      <div className="map-overlay intro-card">
+        <div className="eyebrow">Field intelligence for Ghana</div>
+        <h1>See what your land<br />is telling you.</h1>
+        <p>Local forecasts, modelled soil conditions and satellite context—together in one calm view.</p>
+      </div>
+      <div className={`map-overlay home-search${searchCollapsed ? ' home-search-collapsed' : ''}`}>
         <LocationSearch onSelect={choose} compact={searchCollapsed} />
       </div>
       <div className="map-overlay map-location"><Navigation size={14} /><span>{location.name}<small>{location.region}</small></span></div>
