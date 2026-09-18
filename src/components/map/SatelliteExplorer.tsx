@@ -45,7 +45,7 @@ export default function SatelliteExplorer() {
         {mode === 'ai' && <AiMode polygon={polygon} />}
       </aside>
     </div>
-    {boundary && <BoundarySummary boundary={boundary} title={`Boundary ready near ${location.name}`} />}
+    {boundary && <BoundarySummary boundary={boundary} title={`Boundary ready near ${location.name}`} locationName={location.name} locationRegion={location.region} cropName={crop.name} imageryNote="Esri satellite basemap; analysis layer is requested separately." />}
   </div>;
 }
 

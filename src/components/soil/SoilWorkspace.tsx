@@ -44,7 +44,7 @@ export default function SoilWorkspace() {
         </>}
       </section>
     </div>
-    {boundary && <BoundarySummary boundary={boundary} title={`Boundary ready near ${state.location.name}`} />}
+    {boundary && <BoundarySummary boundary={boundary} title={`Boundary ready near ${state.location.name}`} locationName={state.location.name} locationRegion={state.location.region} imageryNote="Satellite basemap available; no imagery analysis layer requested." />}
     <MonthlyOutlook location={state.location} />
     <section className="soil-bottom">
       <div className="panel panel-pad unavailable-card"><div className="ndmi-orb">NDMI</div><div><h3>Vegetation water-stress layer</h3><p>Use Google Earth Engine to calculate cloud-masked NDMI for a drawn field. No index is being inferred from weather data.</p><a className="btn" href="/settings#integrations">Configure Earth Engine</a></div></div>

@@ -400,31 +400,49 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
 .nav-dropdown-menu a { display: block; white-space: nowrap; }
 .nav-dropdown-menu a[aria-current='page'] { color: #b8ef65; background: rgba(184,239,101,.1); }
 
-/* Farm boundary completion */
+/* Farm boundary completion report */
 .boundary-summary { margin-top: 12px; }
 .boundary-summary-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
 .boundary-summary h2 { margin: 0; font-size: clamp(20px, 2.7vw, 28px); letter-spacing: -.04em; }
 .boundary-summary .panel-subtitle { margin: 7px 0 0; }
-.boundary-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin-top: 22px; }
-.boundary-stat { min-width: 0; padding: 14px; border: 1px solid rgba(173,205,184,.15); border-radius: 12px; background: rgba(184,239,101,.045); }
-.boundary-stat strong { display: block; overflow: hidden; color: #f4f1de; font-size: 18px; letter-spacing: -.03em; text-overflow: ellipsis; white-space: nowrap; }
-.boundary-stat small { display: block; margin-top: 5px; color: #819687; font-size: 10px; }
-.boundary-next { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(173,205,184,.12); }
-.boundary-next strong { font-size: 13px; }
-.boundary-next p { max-width: 640px; margin: 5px 0 0; color: #91a695; font-size: 12px; line-height: 1.55; }
-.boundary-links { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
-.boundary-links .btn { white-space: nowrap; }
-.boundary-disclaimer { margin: 16px 0 0; }
 
-@media (max-width: 920px) {
-  .nav-dropdown { border-top: 1px solid rgba(173,205,184,.1); }
-  .nav-dropdown > summary { padding: 9px 13px; border-radius: 0; }
-  .nav-dropdown-menu { position: static; min-width: 0; gap: 0; padding: 0 0 5px 10px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-  .nav-dropdown-menu a { padding: 9px 13px; }
-  .boundary-summary-head, .boundary-next { align-items: flex-start; flex-direction: column; }
-  .boundary-links { justify-content: flex-start; }
-}
-@media (max-width: 540px) {
-  .boundary-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .boundary-stat strong { font-size: 16px; }
+/* Detailed selected-area report */
+.boundary-report-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(173,205,184,.14); }
+.boundary-report-section h3 { margin: 0; color: #f4f1de; font-size: 16px; letter-spacing: -.02em; }
+.boundary-report-list { display: grid; gap: 0; margin: 12px 0 0; }
+.boundary-report-row { display: grid; grid-template-columns: minmax(150px, .35fr) minmax(0, 1fr); gap: 18px; padding: 11px 0; border-bottom: 1px solid rgba(173,205,184,.09); }
+.boundary-report-row:last-child { border-bottom: 0; }
+.boundary-forecast-list { display: grid; gap: 6px; margin-top: 14px; }
+.boundary-forecast-row { display: grid; grid-template-columns: minmax(105px, .35fr) minmax(180px, .8fr) minmax(190px, 1fr); gap: 12px; align-items: baseline; padding: 9px 11px; border-radius: 8px; background: rgba(184,239,101,.035); font-size: 11px; }
+.boundary-forecast-row strong { color: #f4f1de; }
+.boundary-forecast-row span { color: #d7e2d4; }
+.boundary-forecast-row small { color: #819687; }
+.boundary-report-row dt { color: #819687; font-size: 11px; }
+.boundary-report-row dd { margin: 0; color: #d7e2d4; font-size: 12px; line-height: 1.5; }
+.boundary-coordinates { margin-top: 14px; }
+.boundary-coordinates summary { width: fit-content; cursor: pointer; color: #b8ef65; font-size: 12px; }
+.boundary-coordinates ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 18px; margin: 12px 0 0; padding: 0; list-style: none; counter-reset: corners; }
+.boundary-coordinates li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 8px; background: rgba(184,239,101,.045); color: #aebfaf; font-size: 11px; }
+.boundary-coordinates li span { color: #819687; }
+.boundary-coordinates code { color: #d7e2d4; font: inherit; }
+.boundary-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.boundary-section-heading p { margin: 5px 0 0; color: #91a695; font-size: 12px; line-height: 1.5; }
+.boundary-unavailable { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 12px; padding: 12px; border: 1px solid rgba(223,125,114,.25); border-radius: 10px; }
+.boundary-unavailable p { margin: 0; color: #d7aaa2; font-size: 12px; }
+.boundary-readiness, .boundary-limitations ul { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.boundary-readiness li { display: grid; grid-template-columns: minmax(130px, .25fr) minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 12px; border: 1px solid rgba(173,205,184,.12); border-radius: 10px; background: rgba(184,239,101,.035); }
+.boundary-readiness li strong { color: #f4f1de; font-size: 12px; }
+.boundary-readiness li span { color: #91a695; font-size: 11px; line-height: 1.45; }
+.boundary-readiness .btn { white-space: nowrap; }
+.boundary-limitations ul { padding-left: 18px; list-style: disc; color: #91a695; }
+.boundary-limitations li { padding-left: 4px; font-size: 11px; line-height: 1.55; }
+@media (max-width: 700px) {
+  .boundary-summary-head { align-items: flex-start; flex-direction: column; }
+  .boundary-report-row { grid-template-columns: 1fr; gap: 4px; }
+  .boundary-forecast-row { grid-template-columns: 1fr; gap: 4px; }
+  .boundary-coordinates ol { grid-template-columns: 1fr; }
+  .boundary-readiness li { grid-template-columns: 1fr; gap: 7px; }
+  .boundary-readiness .btn { justify-self: start; }
+  .boundary-section-heading { flex-direction: column; }
+  .boundary-unavailable { align-items: flex-start; flex-direction: column; }
 }

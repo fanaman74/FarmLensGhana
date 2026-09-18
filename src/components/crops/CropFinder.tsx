@@ -36,6 +36,6 @@ export default function CropFinder() {
         {['cocoa', 'oil-palm'].includes(search.crop.slug) && <div className="provider-note"><h3>Dedicated tree-crop layer</h3><p>Forest Data Partnership model 2025b offers probabilities through 2024. Use the Earth Engine panel to request this layer after server authentication is configured. A probability threshold is not proof of crop presence.</p><a href={`https://developers.google.com/earth-engine/datasets/catalog/projects_forestdatapartnership_assets_${search.crop.slug === 'cocoa' ? 'cocoa' : 'palm'}_model_2025b`} target="_blank" rel="noreferrer">Dataset and access details</a></div>}
       </aside>
     </div>}
-    {search && boundary && <BoundarySummary boundary={boundary} title={`Boundary ready near ${search.place.name}`} />}
+    {search && boundary && <BoundarySummary boundary={boundary} title={`Boundary ready near ${search.place.name}`} locationName={search.place.name} locationRegion={search.place.region} cropName={search.crop.name} imageryNote={earthLayer ? earthLayer.title : '2025 annual cropland basemap; no dedicated crop layer requested.'} />}
   </div>;
 }
