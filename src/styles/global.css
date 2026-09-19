@@ -446,3 +446,14 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
   .boundary-section-heading { flex-direction: column; }
   .boundary-unavailable { align-items: flex-start; flex-direction: column; }
 }
+/* Satellite Explorer selected-area panel */
+.area-overview-list { display: grid; gap: 7px; margin: 18px 0; }
+.area-overview-list > div { display: grid; grid-template-columns: minmax(105px, .8fr) minmax(0, 1fr); gap: 3px 12px; padding: 11px 12px; border: 1px solid rgba(173,205,184,.14); border-radius: 10px; background: rgba(184,239,101,.035); }
+.area-overview-list span { color: #819687; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.area-overview-list strong { color: #f4f1de; font-size: 13px; }
+.area-overview-list small { grid-column: 2; color: #718879; font-size: 10px; line-height: 1.4; }
+.area-overview-links { display: grid; gap: 7px; margin-top: 12px; }
+@media (max-width: 540px) {
+  .area-overview-list > div { grid-template-columns: 1fr; }
+  .area-overview-list small { grid-column: auto; }
+}

@@ -1,33 +1,26 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BarChart3, CalendarDays, Cloud, Info, Layers3, Map as MapIcon, ScanLine, Sparkles } from 'lucide-react';
 import FarmMap, { type FarmBoundarySummary } from './FarmMap';
 import BoundarySummary from './BoundarySummary';
 import LocationSearch, { type Place } from '../dashboard/LocationSearch';
-import { crops } from '../../data/crops';
 
 type Mode = 'crop' | 'scan' | 'ai';
 type View = 'map' | 'analytics';
 
 export default function SatelliteExplorer() {
   const [ready, setReady] = useState(false);
-  useEffect(() => {
-    setReady(true);
-    const selected = new URLSearchParams(window.location.search).get('crop');
-    if (selected && crops.some((crop) => crop.slug === selected)) setCropSlug(selected);
-  }, []);
+  useEffect(() => { setReady(true); }, []);
   const [mode, setMode] = useState<Mode>('crop');
   const [view, setView] = useState<View>('map');
   const [location, setLocation] = useState({ name: 'Ghana', region: 'National view', latitude: 7.9465, longitude: -1.0232 });
   const [polygon, setPolygon] = useState<number[][]>([]);
   const [boundary, setBoundary] = useState<FarmBoundarySummary | null>(null);
-  const [cropSlug, setCropSlug] = useState('maize');
   const [clouds, setClouds] = useState(30);
-  const crop = useMemo(() => crops.find((item) => item.slug === cropSlug)!, [cropSlug]);
 
   return <div className="satellite-app">
     <div className="satellite-toolbar">
       <div className="mode-tabs" role="group" aria-label="Explorer mode">
-        <button disabled={!ready} aria-pressed={mode === 'crop'} onClick={() => setMode('crop')}><Layers3/>Crop Explorer</button>
+        <button disabled={!ready} aria-pressed={mode === 'crop'} onClick={() => setMode('crop')}><Layers3/>Area overview</button>
         <button disabled={!ready} aria-pressed={mode === 'scan'} onClick={() => setMode('scan')}><ScanLine/>Field Scan</button>
         <button disabled={!ready} aria-pressed={mode === 'ai'} onClick={() => setMode('ai')}><Sparkles/>AI Crop Map <small>Beta</small></button>
       </div>
@@ -40,25 +33,34 @@ export default function SatelliteExplorer() {
         <div className="imagery-status"><div><strong>Esri satellite basemap</strong><small>Analysis layer not requested</small></div></div>
       </section>
       <aside className={`satellite-panel panel panel-pad ${view === 'map' ? 'mobile-sheet' : ''}`}>
-        {mode === 'crop' && <CropMode crop={crop} cropSlug={cropSlug} setCropSlug={setCropSlug} polygon={polygon} />}
+        {mode === 'crop' && <AreaOverview boundary={boundary} location={location} polygon={polygon} />}
         {mode === 'scan' && <ScanMode location={location} clouds={clouds} setClouds={setClouds} polygon={polygon} />}
         {mode === 'ai' && <AiMode polygon={polygon} />}
       </aside>
     </div>
-    {boundary && <BoundarySummary boundary={boundary} title={`Boundary ready near ${location.name}`} locationName={location.name} locationRegion={location.region} cropName={crop.name} imageryNote="Esri satellite basemap; analysis layer is requested separately." />}
+    {boundary && <BoundarySummary boundary={boundary} title={`Boundary ready near ${location.name}`} locationName={location.name} locationRegion={location.region} imageryNote="Esri satellite basemap; analysis layer is requested separately." />}
   </div>;
 }
 
-function CropMode({ crop, cropSlug, setCropSlug, polygon }: any) { return <>
-  <p className="eyebrow">Explore a crop</p><h2 className="panel-title">What does {crop.name.toLowerCase()} need?</h2><p className="panel-subtitle">Compare broad crop requirements with live conditions for your chosen area.</p>
-  <label className="label" htmlFor="crop-select">Crop or plant</label><select id="crop-select" className="input" value={cropSlug} onChange={(e) => setCropSlug(e.target.value)}>{crops.map((item) => <option value={item.slug} key={item.slug}>{item.name} · {item.scientificName}</option>)}</select>
-  <p className="provider-note">Draft crop values and local names await source verification. Rainfall periods are unverified; compatibility assessment is disabled.</p>
-  <div className="crop-feature"><span style={{background: crop.colour}}>{crop.icon}</span><div><strong>{crop.name}</strong><em>{crop.scientificName}</em><p>{crop.summary}</p></div></div>
-  <div className="requirement-list"><div><span>Suitable temperature</span><b>{crop.temperature[0]}–{crop.temperature[1]}°C</b></div><div><span>Approx. annual rainfall</span><b>{crop.rainfall[0]}–{crop.rainfall[1]} mm</b></div><div><span>Preferred pH</span><b>{crop.ph[0]}–{crop.ph[1]}</b></div><div><span>Soil</span><b>{crop.soil}</b></div></div>
-  <div className="provider-note"><Info/><p>{polygon.length ? 'Boundary ready. Connect an imagery provider to compare vegetation observations.' : 'Draw a farm boundary to prepare a vegetation comparison.'} NDVI or NDMI cannot prove crop species.</p></div>
-  <a className="btn btn-primary full-btn" href={`/crops/${crop.slug}`}>Open complete crop guide</a>
-</>; }
-
+function AreaOverview({ boundary, location, polygon }: { boundary: FarmBoundarySummary | null; location: { name: string; region: string; latitude: number; longitude: number }; polygon: number[][] }) {
+  return <>
+    <p className="eyebrow">Selected farm area</p>
+    <h2 className="panel-title">{boundary ? 'Boundary overview' : 'Draw your farm first'}</h2>
+    <p className="panel-subtitle">{boundary ? 'The map selection is ready to use with the field tools.' : 'Click Draw farm on the map, add each corner, then choose Finish to create an area report.'}</p>
+    <div className="area-overview-list">
+      <div><span>Selected place</span><strong>{location.name}</strong><small>{location.region}</small></div>
+      <div><span>Boundary status</span><strong>{boundary ? 'Ready' : polygon.length ? 'In progress' : 'Not drawn'}</strong><small>{boundary ? 'Saved locally in this browser' : 'No completed farm polygon yet'}</small></div>
+      <div><span>Estimated area</span><strong>{boundary ? `${boundary.areaHectares.toFixed(2)} ha` : '—'}</strong><small>{boundary ? 'Approximate map measurement' : 'Available after Finish'}</small></div>
+      <div><span>Approximate perimeter</span><strong>{boundary ? `${boundary.perimeterKm.toFixed(2)} km` : '—'}</strong><small>{boundary ? 'Distance around the polygon' : 'Available after Finish'}</small></div>
+      <div><span>Boundary corners</span><strong>{boundary ? boundary.vertexCount : '—'}</strong><small>{boundary ? 'Map points used' : 'Add at least three points'}</small></div>
+      <div><span>Centre point</span><strong>{boundary ? `${boundary.centroid.latitude.toFixed(3)}°, ${boundary.centroid.longitude.toFixed(3)}°` : '—'}</strong><small>{boundary ? 'Average of selected coordinates' : 'Available after Finish'}</small></div>
+    </div>
+    {boundary ? <>
+      <div className="provider-note"><strong>Next steps</strong><p>Use the same selected area in Weather for a forecast or Soil for modelled root-zone conditions. Field Scan can search the Sentinel-2 catalogue around the selected location.</p></div>
+      <div className="area-overview-links"><a className="btn btn-primary full-btn" href="/weather">Check weather</a><a className="btn full-btn" href="/soil">Read soil</a></div>
+    </> : <div className="provider-note"><Info/><p>The completed report will include area, perimeter, corner count, centre coordinates and links to the next analysis tools. The polygon stays in this browser until you choose an analysis action.</p></div>}
+  </>;
+}
 function ScanMode({ location, clouds, setClouds, polygon }: { location: { name: string; region: string; latitude: number; longitude: number }; clouds: number; setClouds: (value: number) => void; polygon: number[][] }) {
   const [from, setFrom] = useState(dateOffset(-30)), [to, setTo] = useState(dateOffset(0));
   const [processing, setProcessing] = useState(false), [message, setMessage] = useState('');
