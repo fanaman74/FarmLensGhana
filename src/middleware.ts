@@ -2,6 +2,19 @@ import { defineMiddleware } from 'astro:middleware';
 
 const requests = new Map<string, { count: number; until: number }>();
 
+function isSameOriginRequest(request: Request, requestUrl: URL) {
+  const origin = request.headers.get('origin');
+  if (!origin) return false;
+  let originUrl: URL;
+  try { originUrl = new URL(origin); } catch { return false; }
+  if (originUrl.host !== requestUrl.host) return false;
+  if (originUrl.protocol === requestUrl.protocol) return true;
+  const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  if (forwardedProto && originUrl.protocol === forwardedProto + ':') return true;
+  // Railway terminates TLS at the proxy and Astro sees the internal HTTP origin.
+  return import.meta.env.PROD && requestUrl.protocol === 'http:' && originUrl.protocol === 'https:';
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
   if (context.url.pathname.startsWith('/api/')) {
     const now = Date.now();
@@ -15,7 +28,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     } else requests.set(key, { count: 1, until: now + 60_000 });
   }
   if (context.url.pathname.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(context.request.method)) {
-    if (context.request.headers.get('origin') !== context.url.origin) {
+    if (!isSameOriginRequest(context.request, context.url)) {
       return Response.json({ error: 'Same-origin request required.' }, { status: 403 });
     }
     if (Number(context.request.headers.get('content-length') ?? 0) > 100_000) {
