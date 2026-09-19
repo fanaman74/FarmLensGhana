@@ -81,7 +81,17 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
       updatePolygon(map, pointsRef.current);
     });
     map.on('click', (event: MapMouseEvent) => {
-      if (!pointsRef.current.length && !container.current?.dataset.drawing) {
+      // A completed boundary should not lock the map into its old polygon.
+      // Any click outside an active drawing session selects a new location and clears stale geometry.
+      if (container.current?.dataset.drawing !== 'true') {
+        if (pointsRef.current.length) {
+          pointsRef.current = [];
+          setPointCount(0);
+          setDrawMessage('');
+          updatePolygon(map, []);
+          callbacks.current.onPolygon?.([]);
+          callbacks.current.onFinish?.(null);
+        }
         callbacks.current.onLocation?.(event.lngLat.lat, event.lngLat.lng);
         markerRef.current?.setLngLat(event.lngLat);
         return;

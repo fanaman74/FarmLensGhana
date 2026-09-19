@@ -11,6 +11,10 @@ const initial = { name: 'Kumasi', region: 'Ashanti', latitude: 6.6885, longitude
 export default function SoilWorkspace() {
   const state = useWeather(initial);
   const [boundary, setBoundary] = useState<FarmBoundarySummary | null>(null);
+  const finishBoundary = (summary: FarmBoundarySummary | null) => {
+    setBoundary(summary);
+    if (summary) state.setLocation({ name: 'Selected farm centre', region: `${summary.centroid.latitude.toFixed(3)}, ${summary.centroid.longitude.toFixed(3)}`, latitude: summary.centroid.latitude, longitude: summary.centroid.longitude });
+  };
   const currentHour = state.weather?.hourly.find((hour) => hour.time >= state.weather!.current.time.slice(0,13) + ':00');
   const rain7 = state.weather?.daily.reduce((sum, day) => sum + day.rainfall, 0) ?? 0;
   const et7 = state.weather?.daily.reduce((sum, day) => sum + day.et0, 0) ?? 0;
@@ -22,9 +26,9 @@ export default function SoilWorkspace() {
   return <div className="soil-workspace">
     <div className="weather-toolbar panel panel-pad"><LocationSearch onSelect={(place: Place) => state.setLocation(place)} /><span className="chip"><span className="chip-dot"/> Model estimate</span></div>
     <div className="soil-grid">
-      <section className="soil-map panel"><FarmMap latitude={state.location.latitude} longitude={state.location.longitude} drawing onFinish={setBoundary} onPolygon={(coordinates) => { if (!coordinates.length) setBoundary(null); }} onLocation={(latitude, longitude) => state.setLocation({ name: 'Selected field', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude })} /></section>
+      <section className="soil-map panel"><FarmMap latitude={state.location.latitude} longitude={state.location.longitude} drawing onFinish={finishBoundary} onPolygon={(coordinates) => { if (!coordinates.length) setBoundary(null); }} onLocation={(latitude, longitude) => state.setLocation({ name: 'Selected field', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude })} /></section>
       <section className="panel panel-pad soil-insights">
-        <div className="section-heading"><div><p className="eyebrow">Near {state.location.name}</p><h2>Root-zone snapshot</h2><p>Modelled conditions—not field sensors.</p></div></div>
+        <div className="section-heading"><div><p className="eyebrow">Near {state.location.name}</p><h2>Root-zone snapshot</h2><p>Modelled conditions—not field sensors.</p>{state.weather && <p className="meta">Selected point: {state.location.latitude.toFixed(4)}°, {state.location.longitude.toFixed(4)}° · Model grid: {state.weather.location.latitude.toFixed(3)}°, {state.weather.location.longitude.toFixed(3)}°</p>}</div></div>
         {state.loading && <div className="skeleton sk-lg"/>}
         {state.error && <div className="error-state"><b>Soil estimates unavailable</b><p>{state.error}</p></div>}
         {state.weather && <>
