@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AttributionControl, Map as MapLibreMap, Marker, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
-import { Crosshair, Layers3, Minus, Plus, RotateCcw } from 'lucide-react';
+import { Crosshair, ExternalLink, Layers3, Minus, Plus, RotateCcw } from 'lucide-react';
 import { validateFarmPolygon } from '../../lib/geo/geojson';
 type FeatureCollection = Extract<Parameters<GeoJSONSource['setData']>[0], { type: 'FeatureCollection' }>;
 
@@ -208,6 +208,7 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
       <button onClick={() => mapRef.current?.zoomIn()} aria-label="Zoom in" title="Zoom in"><Plus size={18} /></button>
       <button onClick={() => mapRef.current?.zoomOut()} aria-label="Zoom out" title="Zoom out"><Minus size={18} /></button>
       <button onClick={locate} aria-label="Use my location" title="Use my location"><Crosshair size={18} /></button>
+      <a href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${latitude},${longitude}`} target="_blank" rel="noreferrer" aria-label="Open Street View at this location" title="Open Street View"><ExternalLink size={17} /></a>
     </div>
     {drawing && <div className="draw-controls">
       {!isDrawing ? <button className="btn btn-primary" disabled={!ready} onClick={toggleDrawing}><Layers3 size={16} /> Draw farm</button> : <button className="btn btn-primary" disabled={pointCount < 3} onClick={finishPolygon}>Finish ({pointCount})</button>}

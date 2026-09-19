@@ -94,9 +94,9 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
 .map-location small { color: #9bb5a4; }
 .map-badge { position: absolute; z-index: 2; top: 16px; right: 16px; display: flex; align-items: center; gap: 8px; padding: 9px 12px; color: #e2eadf; border: 1px solid rgba(255,255,255,.16); border-radius: 99px; background: rgba(7,24,16,.72); backdrop-filter: blur(12px); font-size: 12px; font-weight: 700; }
 .map-zoom { position: absolute; z-index: 3; right: 16px; top: 60px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,255,255,.16); border-radius: 12px; background: rgba(7,24,16,.78); }
-.map-zoom button { width: 42px; height: 42px; display: grid; place-items: center; border: 0; border-bottom: 1px solid rgba(255,255,255,.1); cursor: pointer; color: #f4f1de; background: transparent; }
-.map-zoom button:last-child { border: 0; }
-.map-zoom button:hover { background: rgba(184,239,101,.12); }
+.map-zoom button, .map-zoom a { width: 42px; height: 42px; display: grid; place-items: center; border: 0; border-bottom: 1px solid rgba(255,255,255,.1); cursor: pointer; color: #f4f1de; background: transparent; }
+.map-zoom button:last-child, .map-zoom a:last-child { border: 0; }
+.map-zoom button:hover, .map-zoom a:hover, .map-zoom a:focus-visible { background: rgba(184,239,101,.12); }
 .draw-controls { position: absolute; z-index: 3; left: 16px; bottom: 16px; display: flex; gap: 8px; }
 .location-search { position: relative; height: 50px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border: 1px solid rgba(184,239,101,.32); border-radius: 15px; background: rgba(3,15,9,.72); }
 .location-search.compact { height: 42px; gap: 8px; padding: 0 12px; border-radius: 12px; }
