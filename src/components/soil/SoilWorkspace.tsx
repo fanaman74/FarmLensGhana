@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, Droplets, FlaskConical, Layers3, ThermometerSun } from 'lucide-react';
+import { Activity, Droplets, FlaskConical, Info, Layers3, ThermometerSun } from 'lucide-react';
 import FarmMap, { type FarmBoundarySummary } from '../map/FarmMap';
 import BoundarySummary from '../map/BoundarySummary';
 import LocationSearch, { type Place } from '../dashboard/LocationSearch';
@@ -28,7 +28,7 @@ export default function SoilWorkspace() {
     <div className="soil-grid">
       <section className="soil-map panel"><FarmMap latitude={state.location.latitude} longitude={state.location.longitude} drawing onFinish={finishBoundary} onPolygon={(coordinates) => { if (!coordinates.length) setBoundary(null); }} onLocation={(latitude, longitude) => state.setLocation({ name: 'Selected field', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude })} /></section>
       <section className="panel panel-pad soil-insights">
-        <div className="section-heading"><div><p className="eyebrow">Near {state.location.name}</p><h2>Root-zone snapshot</h2><p>Modelled conditions—not field sensors.</p>{state.weather && <p className="meta">Selected point: {state.location.latitude.toFixed(4)}°, {state.location.longitude.toFixed(4)}° · Model grid: {state.weather.location.latitude.toFixed(3)}°, {state.weather.location.longitude.toFixed(3)}°</p>}</div></div>
+        <div className="section-heading"><div><p className="eyebrow">Near {state.location.name}</p><h2>Root-zone snapshot</h2><p>Modelled conditions—not field sensors.</p>{state.weather && <p className="meta">Selected point: {state.location.latitude.toFixed(4)}°, {state.location.longitude.toFixed(4)}° · Model grid: {state.weather.location.latitude.toFixed(3)}°, {state.weather.location.longitude.toFixed(3)}°</p>}</div></div>{state.weather && <div className="provider-note warning soil-model-note"><Info/><div><strong>Map colours are not soil readings</strong><p>The satellite image is a basemap for visual context. These values come from the provider model grid at the model-grid coordinate above, so nearby yellow and green areas can share the same result. Use the Earth Engine analysis layer or field sampling for field-scale differences.</p></div></div>}
         {state.loading && <div className="skeleton sk-lg"/>}
         {state.error && <div className="error-state"><b>Soil estimates unavailable</b><p>{state.error}</p></div>}
         {state.weather && <>
