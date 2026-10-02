@@ -22,21 +22,22 @@ export default function SoilWorkspace() {
   const soilTemperature = currentHour?.soilTemperature;
   const values = (state.weather?.hourly.slice(0, 168).filter((_, index) => index % 6 === 0).map((hour) => hour.soilMoisture).filter((n): n is number => n !== null)) ?? [];
   const min = Math.min(...values, .1), max = Math.max(...values, .4);
+  const modelSampleTime = state.weather ? currentHour ? new Date(`${currentHour.time}Z`).toLocaleString('en-GH', { timeZone: 'Africa/Accra', dateStyle: 'medium', timeStyle: 'short' }) : 'Unavailable' : '';
 
   return <div className="soil-workspace">
     <div className="weather-toolbar panel panel-pad"><LocationSearch onSelect={(place: Place) => state.setLocation(place)} /><span className="chip"><span className="chip-dot"/> Model estimate</span></div>
     <div className="soil-grid">
       <section className="soil-map panel"><FarmMap latitude={state.location.latitude} longitude={state.location.longitude} drawing onFinish={finishBoundary} onPolygon={(coordinates) => { if (!coordinates.length) setBoundary(null); }} onLocation={(latitude, longitude) => state.setLocation({ name: 'Selected field', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude })} /></section>
       <section className="panel panel-pad soil-insights">
-        <div className="section-heading"><div><p className="eyebrow">Near {state.location.name}</p><h2>Root-zone snapshot</h2><p>Modelled conditions—not field sensors.</p>{state.weather && <p className="meta">Selected point: {state.location.latitude.toFixed(4)}°, {state.location.longitude.toFixed(4)}° · Model grid: {state.weather.location.latitude.toFixed(3)}°, {state.weather.location.longitude.toFixed(3)}°</p>}</div></div>{state.weather && <div className="provider-note warning soil-model-note"><Info/><div><strong>Map colours are not soil readings</strong><p>The satellite image is a basemap for visual context. These values come from the provider model grid at the model-grid coordinate above, so nearby yellow and green areas can share the same result. Use the Earth Engine analysis layer or field sampling for field-scale differences.</p></div></div>}
-        {state.loading && <div className="skeleton sk-lg"/>}
-        {state.error && <div className="error-state"><b>Soil estimates unavailable</b><p>{state.error}</p></div>}
+        <div className="section-heading"><div><p className="eyebrow">Near {state.location.name}</p><h2>Root-zone snapshot</h2><p>Modelled conditions—not field sensors.</p><p className="meta">Selected point: {state.location.latitude.toFixed(4)}°, {state.location.longitude.toFixed(4)}°{state.weather && <> · Provider grid: {state.weather.location.latitude.toFixed(3)}°, {state.weather.location.longitude.toFixed(3)}° · Model sample: {modelSampleTime}{modelSampleTime !== 'Unavailable' && ' GMT'}</>}</p></div></div>{state.weather && <div className="provider-note warning soil-model-note"><Info/><div><strong>Map colours are not soil readings</strong><p>The satellite image is a basemap for visual context. These values come from the provider model grid above, not field-level measurements. Nearby points can share a model area; soil estimates do not resolve individual fields. Check field conditions directly.</p>{state.gridComparison && <p role="status"><strong>Same model area as your previous point.</strong> Both selections use provider grid {state.gridComparison.current.latitude.toFixed(3)}°, {state.gridComparison.current.longitude.toFixed(3)}°, so soil estimates may match.</p>}</div></div>}
+        {state.loading && <div role="status" className="skeleton sk-lg">Loading model estimates for the selected point…</div>}
+        {state.error && <div className="error-state"><b>Soil estimates unavailable</b><p>{state.error}</p><button className="btn" onClick={state.retry}>Try again</button></div>}
         {state.weather && <>
           <div className="soil-primary"><Droplets/><span><small>Moisture · 3–9 cm</small><strong>{moisture == null ? 'Unavailable' : `${(moisture * 100).toFixed(1)}%`}</strong><em>volumetric water content</em></span></div>
           <div className="stat-grid soil-stats">
             <SoilStat icon={<ThermometerSun/>} label="Soil temp · 6 cm" value={soilTemperature == null ? '—' : `${soilTemperature.toFixed(1)}°C`} />
-            <SoilStat icon={<Droplets/>} label="Rain · 7 days" value={`${rain7.toFixed(1)} mm`} />
-            <SoilStat icon={<Activity/>} label="ET₀ · 7 days" value={`${et7.toFixed(1)} mm`} />
+            <SoilStat icon={<Droplets/>} label="Forecast rain · 7 days" value={`${rain7.toFixed(1)} mm`} />
+            <SoilStat icon={<Activity/>} label="Forecast ET₀ · 7 days" value={`${et7.toFixed(1)} mm`} />
             <SoilStat icon={<Layers3/>} label="Depth" value="3–9 cm" />
           </div>
           <div className="section-heading trend-head"><div><h3>Seven-day moisture trend</h3><p>Six-hour intervals from the forecast model.</p></div></div>
@@ -54,7 +55,7 @@ export default function SoilWorkspace() {
       <div className="panel panel-pad unavailable-card"><div className="ndmi-orb">NDMI</div><div><h3>Vegetation water-stress layer</h3><p>Use Google Earth Engine to calculate cloud-masked NDMI for a drawn field. No index is being inferred from weather data.</p><a className="btn" href="/settings#integrations">Configure Earth Engine</a></div></div>
       <div className="panel panel-pad disclaimer-card"><FlaskConical/><div><h3>Use field evidence too</h3><p>These are weather-model estimates for an area, not direct sensor readings or laboratory results. Check soil by hand, inspect roots and drainage, and use laboratory testing for nutrient or pH decisions.</p></div></div>
     </section>
-    {state.weather && <div className="source-bar source-panel"><span><strong>Provider:</strong> Open-Meteo</span><span><strong>Model values:</strong> soil moisture, soil temperature, ET₀</span><span><strong>Updated:</strong> {new Date(state.updatedAt).toLocaleString('en-GH', { timeZone: 'Africa/Accra' })}</span></div>}
+    {state.weather && <div className="source-bar source-panel"><span><strong>Provider:</strong> Open-Meteo</span><span><strong>Model values:</strong> soil moisture, soil temperature</span><span><strong>Forecast:</strong> rain and ET₀</span><span><strong>Sample:</strong> {modelSampleTime}{modelSampleTime !== 'Unavailable' && ' GMT'}</span><span><strong>Updated:</strong> {new Date(state.updatedAt).toLocaleString('en-GH', { timeZone: 'Africa/Accra' })}</span></div>}
   </div>;
 }
 

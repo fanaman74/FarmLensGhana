@@ -1,5 +1,20 @@
 import { test, expect } from '@playwright/test';
 
+function weatherFixture(grid: [number, number], moisture = .296, rainfall = 46) {
+  const times = Array.from({ length: 24 }, (_, index) => new Date(Date.UTC(2026, 8, 5, 12 + index)).toISOString().slice(0, 16));
+  return {
+    ok: true,
+    source: 'Open-Meteo',
+    fetchedAt: '2026-09-05T12:30:00.000Z',
+    data: {
+      location: { latitude: grid[0], longitude: grid[1], timezone: 'Africa/Accra' },
+      current: { time: '2026-09-05T12:00', temperature: 23.5, apparentTemperature: 24, humidity: 80, precipitation: 0, weatherCode: 2, windSpeed: 8, windGusts: 12 },
+      daily: Array.from({ length: 7 }, (_, index) => ({ date: `2026-09-${String(index + 5).padStart(2, '0')}`, weatherCode: 2, maxTemperature: 30, minTemperature: 22, precipitationProbability: 40, rainfall: rainfall / 7, et0: 3, windSpeed: 8, windGusts: 12 })),
+      hourly: times.map((time) => ({ time, temperature: 23.5, humidity: 80, precipitationProbability: 40, rainfall: 0, soilTemperature: 23.9, soilMoisture: moisture }))
+    }
+  };
+}
+
 test('farm corners and connecting lines remain visible without basemap tiles', async ({ page }) => {
   await page.route('**/server.arcgisonline.com/**', route => route.abort());
   await page.goto('/satellite');
@@ -29,6 +44,127 @@ test('monthly outlook follows the selected place and renders 30 days', async ({ 
   await request;
   await expect(page.getByRole('region', { name: 'Monthly weather outlook' })).toContainText('Tamale');
   await expect(page.locator('.outlook-day')).toHaveCount(30);
+});
+
+test('map clicks replace soil data and report an actual shared provider grid', async ({ page }) => {
+  await page.addInitScript(() => localStorage.removeItem('farmlens-location'));
+  await page.route('**/server.arcgisonline.com/**', route => route.abort());
+  const requestCoordinates: Array<[string, string]> = [];
+  await page.route('**/api/weather?**', async route => {
+    const url = new URL(route.request().url());
+    requestCoordinates.push([url.searchParams.get('latitude')!, url.searchParams.get('longitude')!]);
+    await route.fulfill({ json: weatherFixture([6.7135324, -1.5895691]) });
+  });
+  await page.goto('/soil');
+  await expect(page.getByText(/Model sample:/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Draw farm' })).toBeEnabled();
+  const map = page.locator('.farm-map');
+  await map.scrollIntoViewIfNeeded();
+  const box = (await map.boundingBox())!;
+  await page.mouse.click(box.x + box.width * .24, box.y + box.height * .36);
+  await expect.poll(() => requestCoordinates.length).toBe(2);
+  expect(requestCoordinates[0]).not.toEqual(requestCoordinates[1]);
+  await expect(page.getByRole('status').filter({ hasText: 'Same model area as your previous point' })).toBeVisible();
+  await expect(page.getByText(/Provider grid: 6\.714°, -1\.590°/)).toBeVisible();
+  await expect(page.getByText(/Forecast rain · 7 days/)).toBeVisible();
+});
+
+test('a slow old soil response cannot overwrite a newer map selection', async ({ page }) => {
+  await page.addInitScript(() => localStorage.removeItem('farmlens-location'));
+  await page.route('**/server.arcgisonline.com/**', route => route.abort());
+  let releaseOld!: () => void;
+  const oldResponse = new Promise<void>(resolve => { releaseOld = resolve; });
+  let calls = 0;
+  await page.route('**/api/weather?**', async route => {
+    calls += 1;
+    if (calls === 1) {
+      await route.fulfill({ json: weatherFixture([6.7135324, -1.5895691], .296, 46) });
+      return;
+    }
+    if (calls === 2) {
+      await oldResponse;
+      await route.fulfill({ json: weatherFixture([9.384886, -.86013794], .210, 55.5) }).catch(() => undefined);
+      return;
+    }
+    await route.fulfill({ json: weatherFixture([5.5887523, -.22406006], .127, 20.2) });
+  });
+  await page.goto('/soil');
+  await expect(page.getByText(/Provider grid: 6\.714°, -1\.590°/)).toBeVisible();
+  await expect(page.locator('.soil-primary').getByText('29.6%')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Draw farm' })).toBeEnabled();
+  const map = page.locator('.farm-map');
+  await map.scrollIntoViewIfNeeded();
+  const box = (await map.boundingBox())!;
+  const requestB = page.waitForRequest(r => r.url().includes('/api/weather?') && !r.url().includes('6.6885'));
+  await page.mouse.click(box.x + box.width * .72, box.y + box.height * .62);
+  await requestB;
+  await expect(page.locator('.soil-insights .soil-primary')).toHaveCount(0);
+  await expect(page.locator('.soil-insights').getByRole('status')).toContainText('Loading model estimates for the selected point');
+  const requestC = page.waitForRequest(r => r.url().includes('/api/weather?') && !r.url().includes('6.6885'));
+  await page.mouse.click(box.x + box.width * .28, box.y + box.height * .28);
+  await requestC;
+  await expect(page.getByText(/Provider grid: 5\.589°, -0\.224°/)).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Same model area as your previous point' })).toHaveCount(0);
+  releaseOld();
+  await expect(page.getByText(/Provider grid: 5\.589°, -0\.224°/)).toBeVisible();
+  await expect(page.locator('.soil-primary').getByText('12.7%')).toBeVisible();
+  await expect(page.getByText('20.2 mm')).toBeVisible();
+});
+
+test('soil selection keeps coordinates visible and offers retry after an error', async ({ page }) => {
+  await page.addInitScript(() => localStorage.removeItem('farmlens-location'));
+  let attempts = 0;
+  await page.route('**/api/weather?**', route => {
+    attempts += 1;
+    return attempts === 1
+      ? route.fulfill({ status: 400, json: { ok: false, error: { message: 'Fixture weather unavailable.' } } })
+      : route.fulfill({ json: weatherFixture([6.7135324, -1.5895691]) });
+  });
+  await page.goto('/soil');
+  await expect(page.getByText('Selected point: 6.6885°, -1.6244°')).toBeVisible();
+  await expect(page.getByText('Soil estimates unavailable')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.locator('.soil-primary').getByText('29.6%')).toBeVisible();
+});
+
+test('a completed soil boundary can be replaced by a later map point', async ({ page }) => {
+  await page.addInitScript(() => localStorage.removeItem('farmlens-location'));
+  await page.route('**/server.arcgisonline.com/**', route => route.abort());
+  let calls = 0;
+  await page.route('**/api/weather?**', async route => {
+    calls += 1;
+    await route.fulfill({ json: weatherFixture([6.7135324, -1.5895691]) });
+  });
+  await page.goto('/soil');
+  await expect(page.getByText(/Model sample:/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Draw farm' })).toBeEnabled();
+  const map = page.locator('.farm-map');
+  await map.scrollIntoViewIfNeeded();
+  const canvas = map.locator('canvas').first();
+  await expect(canvas).toBeVisible();
+  for (let index = 0; index < 6; index += 1) {
+    await page.getByRole('button', { name: 'Zoom in' }).click();
+    await page.waitForTimeout(400);
+  }
+  await page.getByRole('button', { name: 'Draw farm' }).click();
+  await map.scrollIntoViewIfNeeded();
+  const canvasBox = (await canvas.boundingBox())!;
+  const centreX = canvasBox.width / 2;
+  const centreY = canvasBox.height / 2;
+  await canvas.click({ position: { x: centreX - 24, y: centreY - 20 } });
+  await canvas.click({ position: { x: centreX + 24, y: centreY - 20 } });
+  await canvas.click({ position: { x: centreX, y: centreY + 24 } });
+  await expect(page.getByRole('button', { name: /Finish \(3\)/ })).toBeVisible();
+  await page.getByRole('button', { name: /Finish \(3\)/ }).click();
+  await expect(page.getByText(/Boundary ready near Selected farm centre/)).toBeVisible();
+  const callsAfterBoundary = calls;
+  await page.waitForTimeout(700);
+  await map.scrollIntoViewIfNeeded();
+  const newCanvasBox = (await canvas.boundingBox())!;
+  await canvas.click({ position: { x: newCanvasBox.width * .8, y: newCanvasBox.height * .6 } });
+  await expect.poll(() => calls).toBeGreaterThan(callsAfterBoundary);
+  await expect(page.getByText(/Boundary ready near Selected farm centre/)).toHaveCount(0);
 });
 
 test('crop finder separates crop request from newer generic land cover', async ({ page }) => {
