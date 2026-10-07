@@ -210,3 +210,38 @@ test('a place chosen in one workspace opens in the others', async ({ page }) => 
   await page.goto('/weather');
   await expect(page.getByRole('combobox', { name: 'Search Ghanaian town or district' })).toHaveAttribute('placeholder', /Tamale Port/);
 });
+
+test('a farm drawn once feeds every tab on My farm and the other workspaces', async ({ page }) => {
+  await page.route('**/server.arcgisonline.com/**', route => route.abort());
+  await page.route('**/api/geocode?**', route => route.fulfill({ json: { results: [{ id: 1, name: 'Kumasi', region: 'Ashanti', latitude: 6.6885, longitude: -1.6244 }] } }));
+  await page.route('**/api/weather?**', route => route.fulfill({ json: weatherFixture([6.69, -1.62]) }));
+  await page.goto('/farm');
+  await expect(page.getByRole('heading', { name: 'Draw your farm once' })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Search Ghanaian town or district' }).fill('Kumasi');
+  await page.getByRole('option', { name: /Kumasi/ }).click();
+  await page.waitForTimeout(900);
+  await page.getByRole('button', { name: 'Draw farm', exact: true }).click();
+  const map = page.locator('.farm-map');
+  await map.scrollIntoViewIfNeeded();
+  const box = (await map.boundingBox())!;
+  await page.mouse.click(box.x + box.width * .45, box.y + box.height * .45);
+  await page.mouse.click(box.x + box.width * .55, box.y + box.height * .45);
+  await page.mouse.click(box.x + box.width * .5, box.y + box.height * .55);
+  await page.getByRole('button', { name: /Finish \(3\)/ }).click();
+  await expect(page.getByLabel('Farm name')).toHaveValue('My farm');
+  await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
+  await page.getByLabel('Farm name').fill('Cocoa plot');
+  await page.getByLabel('Farm name').press('Enter');
+  await page.getByRole('tab', { name: 'Weather' }).click();
+  await expect(page.getByText('Now in Cocoa plot')).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Search Ghanaian town or district' })).toHaveCount(1);
+  await page.getByRole('tab', { name: 'Soil' }).click();
+  await expect(page.getByRole('heading', { name: 'Root-zone snapshot' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Crops' }).click();
+  await expect(page.getByRole('heading', { name: /Maize/ })).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel('Farm name')).toHaveValue('Cocoa plot');
+  await expect(page.getByRole('tab', { name: 'Crops' })).toHaveAttribute('aria-selected', 'true');
+  await page.goto('/weather');
+  await expect(page.getByRole('combobox', { name: 'Search Ghanaian town or district' })).toHaveAttribute('placeholder', /Cocoa plot/);
+});

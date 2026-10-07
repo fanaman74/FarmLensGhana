@@ -453,3 +453,39 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
   .area-overview-list > div { grid-template-columns: 1fr; }
   .area-overview-list small { grid-column: auto; }
 }
+
+/* Keep the map credit clear of the drawing buttons. */
+.farm-map-wrap:has(.draw-controls) .maplibregl-ctrl-bottom-left { bottom: 62px; }
+
+/* My farm workspace */
+.farm-top { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, .65fr); gap: 12px; }
+.farm-map-panel { position: relative; overflow: hidden; min-height: 560px; }
+.farm-card { display: flex; flex-direction: column; gap: 12px; }
+.farm-card .eyebrow, .farm-card .panel-subtitle { margin: 0; }
+.farm-name .input { width: 100%; margin-top: 4px; font-size: 18px; font-weight: 700; }
+.farm-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; }
+.farm-facts > div { padding: 12px; border-radius: 13px; background: rgba(7,24,16,.35); }
+.farm-facts dt { color: #7f9584; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.farm-facts dd { margin: 4px 0 0; font-size: 15px; font-weight: 700; }
+.farm-facts small { display: block; margin-top: 3px; color: #7f9584; font-size: 11px; }
+.farm-steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.farm-steps li { display: grid; grid-template-columns: 30px 1fr; gap: 2px 12px; padding: 12px; border-radius: 13px; background: rgba(7,24,16,.35); counter-increment: step; }
+.farm-steps li::before { content: counter(step); grid-row: span 2; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; color: #102519; background: #b8ef65; font-weight: 800; }
+.farm-steps b { font-size: 14px; }
+.farm-steps span { color: #93a797; font-size: 13px; line-height: 1.5; }
+.farm-tabs { display: flex; gap: 4px; margin: 16px 0 12px; padding: 5px; overflow-x: auto; border: 1px solid rgba(173,205,184,.14); border-radius: 15px; background: rgba(16,45,32,.72); }
+.farm-tabs button { min-height: 44px; display: flex; flex: 1 0 auto; align-items: center; justify-content: center; gap: 8px; padding: 8px 16px; border: 0; border-radius: 11px; cursor: pointer; color: #8fa797; background: transparent; font-size: 14px; font-weight: 700; }
+.farm-tabs button[aria-selected='true'] { color: #102519; background: #b8ef65; }
+.farm-tabs button:hover:not([aria-selected='true']) { color: #f4f1de; background: rgba(184,239,101,.08); }
+.farm-tab-panel > .boundary-summary { margin-top: 0; }
+.farm-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.farm-columns h2 { margin: 16px 0 6px; }
+.farm-columns .farm-facts { margin: 12px 0; }
+.soil-grid-single { grid-template-columns: 1fr; }
+.farm-saved-note { margin-top: 12px; font-size: 13px; }
+.farm-saved-note a { color: #b8ef65; font-weight: 700; }
+@media (max-width: 920px) {
+  .farm-top, .farm-columns { grid-template-columns: 1fr; }
+  .farm-map-panel { min-height: 460px; }
+  .farm-tabs button { flex: 0 0 auto; }
+}

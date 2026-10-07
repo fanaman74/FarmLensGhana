@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { CloudRain, Droplets, Gauge, Wind } from 'lucide-react';
 import LocationSearch, { type Place } from '../dashboard/LocationSearch';
 import { buildAdvisories } from '../../lib/agriculture/advisoryRules';
-import { useWeather } from './useWeather';
+import { useWeather, type ActiveLocation } from './useWeather';
 import { locateUser } from '../../lib/location/savedLocation';
 import { formatDay, weatherIcon, weatherLabel } from './weatherUtils';
 
 const initial = { name: 'Kumasi', region: 'Ashanti', latitude: 6.6885, longitude: -1.6244 };
 
-export default function WeatherWorkspace() {
-  const state = useWeather(initial);
+/** With `place`, the forecast stays on that place (for example a saved farm) and the search bar is hidden. */
+export default function WeatherWorkspace({ place }: { place?: ActiveLocation }) {
+  const state = useWeather(place ?? initial, { fixed: Boolean(place) });
   const current = state.weather?.current;
   const today = state.weather?.daily[0];
   const advisories = buildAdvisories(state.weather?.daily ?? []);
@@ -19,7 +20,7 @@ export default function WeatherWorkspace() {
   const [locateMessage, setLocateMessage] = useState('');
   const useLocation = () => { setLocateMessage('Finding your location…'); locateUser((latitude, longitude) => { setLocateMessage(''); state.setLocation({ name: 'Your location', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude }); }, setLocateMessage); };
   return <div>
-    <div className="weather-toolbar panel panel-pad"><LocationSearch current={state.location.name} onSelect={(place: Place) => state.setLocation(place)} /><button className="btn" onClick={useLocation}>Use my location</button>{locateMessage && <p role="status" className="toolbar-message">{locateMessage}</p>}</div>
+    {!place && <div className="weather-toolbar panel panel-pad"><LocationSearch current={state.location.name} onSelect={(place: Place) => state.setLocation(place)} /><button className="btn" onClick={useLocation}>Use my location</button>{locateMessage && <p role="status" className="toolbar-message">{locateMessage}</p>}</div>}
     {state.loading && <div className="panel panel-pad content-loading"><div className="skeleton sk-lg"/><div className="skeleton sk-row"/></div>}
     {state.error && <div className="panel panel-pad error-state"><b>Forecast unavailable</b><p>{state.error}</p><button className="btn" onClick={state.retry}>Try again</button></div>}
     {current && today && <>

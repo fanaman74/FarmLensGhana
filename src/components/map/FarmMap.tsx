@@ -26,6 +26,8 @@ interface Props {
   onLocation?: (latitude: number, longitude: number) => void;
   onPolygon?: (coordinates: number[][]) => void;
   onFinish?: (summary: FarmBoundarySummary | null) => void;
+  /** A saved boundary (closed ring) shown as the current farm. Map clicks keep it; drawing a new one replaces it. */
+  boundary?: number[][];
 }
 
 const imageryStyle = {
@@ -44,7 +46,7 @@ function distanceKm(a: number[], b: number[]) {
   return 6371 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
-export default function FarmMap({ latitude, longitude, zoom = 7, focusZoom, drawing = false, highlights, cropland = false, rasterLayer, onLocation, onPolygon, onFinish }: Props) {
+export default function FarmMap({ latitude, longitude, zoom = 7, focusZoom, drawing = false, highlights, cropland = false, rasterLayer, onLocation, onPolygon, onFinish, boundary }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -59,6 +61,8 @@ export default function FarmMap({ latitude, longitude, zoom = 7, focusZoom, draw
   const [screenCursor, setScreenCursor] = useState<number[] | null>(null);
   const callbacks = useRef({ onLocation, onPolygon, onFinish, highlights });
   callbacks.current = { onLocation, onPolygon, onFinish, highlights };
+  const savedBoundary = useRef(boundary);
+  savedBoundary.current = boundary;
 
   useEffect(() => {
     if (!container.current || mapRef.current) return;
@@ -87,6 +91,8 @@ export default function FarmMap({ latitude, longitude, zoom = 7, focusZoom, draw
       // A completed boundary should not lock the map into its old polygon.
       // Any click outside an active drawing session selects a new location and clears stale geometry.
       if (container.current?.dataset.drawing !== 'true') {
+        // A saved farm stays put: clicking around it should not move or erase it.
+        if (savedBoundary.current) return;
         if (pointsRef.current.length) {
           pointsRef.current = [];
           setPointCount(0);
@@ -124,6 +130,15 @@ export default function FarmMap({ latitude, longitude, zoom = 7, focusZoom, draw
     shownCentre.current = `${latitude},${longitude}`;
     map?.easeTo({ center: [longitude, latitude], ...(moved && focusZoom ? { zoom: Math.max(map.getZoom(), focusZoom) } : {}), duration: 650 });
   }, [latitude, longitude]);
+
+  // Show the saved farm, and bring it back when a new drawing is cancelled.
+  const boundaryKey = boundary?.flat().join() ?? '';
+  useEffect(() => {
+    if (!boundary || isDrawing) return;
+    pointsRef.current = boundary.slice(0, -1);
+    setPointCount(pointsRef.current.length);
+    if (mapRef.current) updatePolygon(mapRef.current, pointsRef.current);
+  }, [boundaryKey, isDrawing]);
 
   useEffect(() => {
     (mapRef.current?.getSource('crop-highlights') as GeoJSONSource | undefined)?.setData(highlights ?? { type: 'FeatureCollection', features: [] });
@@ -221,7 +236,7 @@ export default function FarmMap({ latitude, longitude, zoom = 7, focusZoom, draw
     {drawing && <div className="draw-controls">
       {!isDrawing ? <button className="btn btn-primary" disabled={!ready} onClick={toggleDrawing}><Layers3 size={16} /> Draw farm</button> : <button className="btn btn-primary" disabled={pointCount < 3} onClick={finishPolygon}>Finish ({pointCount})</button>}
       {isDrawing && <><button className="btn" disabled={!pointCount} onClick={() => { pointsRef.current.pop(); setPointCount(pointsRef.current.length); if (mapRef.current) updatePolygon(mapRef.current, pointsRef.current); }}>Undo corner</button><button className="btn" onClick={clearDrawing}>Cancel</button></>}
-      {pointCount > 0 && <button className="btn btn-ghost" onClick={clearDrawing} aria-label="Clear drawn boundary"><RotateCcw size={16} /> Clear</button>}
+      {pointCount > 0 && (isDrawing || !boundary) && <button className="btn btn-ghost" onClick={clearDrawing} aria-label="Clear drawn boundary"><RotateCcw size={16} /> Clear</button>}
     </div>}
     {drawing && drawMessage && <p className="draw-help" role="status">{drawMessage}</p>}
   </div>;

@@ -12,7 +12,8 @@ export interface GridComparison {
 const locationKey = (latitude: number, longitude: number) => `${latitude},${longitude}`;
 const sameGrid = (a: WeatherData['location'], b: WeatherData['location']) => a.latitude === b.latitude && a.longitude === b.longitude;
 
-export function useWeather(initial: ActiveLocation) {
+/** `fixed` keeps the hook on `initial` (for example a saved farm) instead of the last place chosen elsewhere. */
+export function useWeather(initial: ActiveLocation, { fixed = false }: { fixed?: boolean } = {}) {
   const [location, setLocationState] = useState<ActiveLocation>(initial);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [source, setSource] = useState('Open-Meteo');
@@ -26,6 +27,7 @@ export function useWeather(initial: ActiveLocation) {
   const lastSuccessfulRequest = useRef<{ grid: WeatherData['location']; selection: Pick<ActiveLocation, 'latitude' | 'longitude'> } | null>(null);
 
   useEffect(() => {
+    if (fixed) return;
     const saved = readSavedLocation();
     if (saved) { currentLocationKey.current = locationKey(saved.latitude, saved.longitude); setLocationState(saved); }
   }, []);

@@ -4,6 +4,7 @@ import FarmMap, { type FarmBoundarySummary } from './FarmMap';
 import BoundarySummary from './BoundarySummary';
 import LocationSearch, { type Place } from '../dashboard/LocationSearch';
 import { readSavedLocation, saveLocation } from '../../lib/location/savedLocation';
+import { saveFarm } from '../../lib/location/savedFarm';
 
 type Mode = 'crop' | 'scan' | 'ai';
 type View = 'map' | 'analytics';
@@ -18,7 +19,9 @@ export default function SatelliteExplorer() {
   const setLocation = (next: { name: string; region: string; latitude: number; longitude: number }) => { setLocationState(next); saveLocation(next); };
   const finishBoundary = (summary: FarmBoundarySummary | null) => {
     setBoundary(summary);
-    if (summary) setLocation({ name: 'Your farm', region: `${summary.centroid.latitude.toFixed(3)}, ${summary.centroid.longitude.toFixed(3)}`, latitude: summary.centroid.latitude, longitude: summary.centroid.longitude });
+    if (!summary) return;
+    const farm = saveFarm(summary);
+    setLocationState({ name: farm.name, region: `${summary.centroid.latitude.toFixed(3)}, ${summary.centroid.longitude.toFixed(3)}`, latitude: summary.centroid.latitude, longitude: summary.centroid.longitude });
   };
   const [polygon, setPolygon] = useState<number[][]>([]);
   const [boundary, setBoundary] = useState<FarmBoundarySummary | null>(null);
@@ -64,7 +67,7 @@ function AreaOverview({ boundary, location, polygon }: { boundary: FarmBoundaryS
     </div>
     {boundary ? <>
       <div className="provider-note"><strong>Next steps</strong><p>Use the same selected area in Weather for a forecast or Soil for modelled root-zone conditions. Field Scan can search the Sentinel-2 catalogue around the selected location.</p></div>
-      <div className="area-overview-links"><a className="btn btn-primary full-btn" href="/weather">Check weather</a><a className="btn full-btn" href="/soil">Read soil</a></div>
+      <div className="area-overview-links"><a className="btn btn-primary full-btn" href="/farm">Open My farm</a><a className="btn full-btn" href="/weather">Check weather</a><a className="btn full-btn" href="/soil">Read soil</a></div>
     </> : <div className="provider-note"><Info/><p>The completed report will include area, perimeter, corner count, centre coordinates and links to the next analysis tools. The polygon stays in this browser until you choose an analysis action.</p></div>}
   </>;
 }

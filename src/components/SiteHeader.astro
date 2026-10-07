@@ -3,7 +3,7 @@ import { APP } from '../config';
 const { pathname } = Astro.url;
 // Every workspace is one click away; the reference pages sit at the end.
 const links = [
-  ['/weather', 'Weather'], ['/soil', 'Soil'], ['/satellite', 'Satellite'], ['/crop-finder', 'Crop finder'], ['/crops', 'Crops'],
+  ['/farm', 'My farm'], ['/weather', 'Weather'], ['/soil', 'Soil'], ['/satellite', 'Satellite'], ['/crop-finder', 'Crop finder'], ['/crops', 'Crops'],
 ];
 const secondary = [['/services', 'Data services'], ['/settings', 'Settings']];
 const isCurrent = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href));
