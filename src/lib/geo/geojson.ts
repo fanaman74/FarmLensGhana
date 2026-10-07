@@ -20,12 +20,72 @@ export function isSelfIntersecting(ring: number[][]): boolean {
   return false;
 }
 
+const toRadians = (value: number) => value * Math.PI / 180;
+const openRing = (ring: number[][]) => ring.length > 1 && ring[0][0] === ring.at(-1)![0] && ring[0][1] === ring.at(-1)![1] ? ring.slice(0, -1) : ring;
+
+/**
+ * WGS84 metres per degree at the ring's mean latitude. Farms are at most a few kilometres across, so a
+ * local ellipsoidal projection is within 0.01% of a full geodesic calculation; a spherical Earth
+ * overstates areas in Ghana by about 0.6%.
+ */
+function localScale(points: number[][]) {
+  const latitude = toRadians(points.reduce((sum, point) => sum + point[1], 0) / points.length);
+  return {
+    x: 111_412.84 * Math.cos(latitude) - 93.5 * Math.cos(3 * latitude) + 0.118 * Math.cos(5 * latitude),
+    y: 111_132.92 - 559.82 * Math.cos(2 * latitude) + 1.175 * Math.cos(4 * latitude) - 0.0023 * Math.cos(6 * latitude),
+  };
+}
+
 export function polygonAreaHectares(ring: number[][]): number {
-  const meanLat = ring.reduce((sum, p) => sum+p[1], 0)/ring.length * Math.PI/180;
-  const metresPerLon = 111_320*Math.cos(meanLat), metresPerLat = 110_574;
+  const points = openRing(ring);
+  if (points.length < 3) return 0;
+  const scale = localScale(points);
   let area = 0;
-  for (let i=0; i<ring.length-1; i++) area += (ring[i][0]*metresPerLon)*(ring[i+1][1]*metresPerLat) - (ring[i+1][0]*metresPerLon)*(ring[i][1]*metresPerLat);
-  return Math.abs(area/2)/10_000;
+  for (let i = 0; i < points.length; i++) {
+    const [x0, y0] = points[i], [x1, y1] = points[(i + 1) % points.length];
+    area += (x0 * scale.x) * (y1 * scale.y) - (x1 * scale.x) * (y0 * scale.y);
+  }
+  return Math.abs(area / 2) / 10_000;
+}
+
+/** Length around the closed boundary. */
+export function polygonPerimeterKm(ring: number[][]): number {
+  const points = openRing(ring);
+  const scale = localScale(points);
+  return points.reduce((total, point, index) => {
+    const next = points[(index + 1) % points.length];
+    return total + Math.hypot((next[0] - point[0]) * scale.x, (next[1] - point[1]) * scale.y) / 1000;
+  }, 0);
+}
+
+/** Area-weighted centroid. Averaging corners drifts toward whichever side has more clicks. */
+export function polygonCentroid(ring: number[][]): { latitude: number; longitude: number } {
+  const points = openRing(ring);
+  const origin = points[0];
+  const scale = Math.cos(toRadians(points.reduce((sum, point) => sum + point[1], 0) / points.length));
+  const local = points.map(([lon, lat]) => [(lon - origin[0]) * scale, lat - origin[1]]);
+  let twiceArea = 0, x = 0, y = 0;
+  for (let i = 0; i < local.length; i++) {
+    const [x0, y0] = local[i], [x1, y1] = local[(i + 1) % local.length];
+    const cross = x0 * y1 - x1 * y0;
+    twiceArea += cross; x += (x0 + x1) * cross; y += (y0 + y1) * cross;
+  }
+  if (Math.abs(twiceArea) < 1e-18) {
+    const mean = points.reduce((sum, [lon, lat]) => [sum[0] + lon, sum[1] + lat], [0, 0]);
+    return { longitude: mean[0] / points.length, latitude: mean[1] / points.length };
+  }
+  return { longitude: origin[0] + x / (3 * twiceArea) / scale, latitude: origin[1] + y / (3 * twiceArea) };
+}
+
+/** Ray-casting test for [longitude, latitude] points. */
+export function pointInPolygon(point: number[], ring: number[][]): boolean {
+  const points = openRing(ring);
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const [xi, yi] = points[i], [xj, yj] = points[j];
+    if ((yi > point[1]) !== (yj > point[1]) && point[0] < (xj - xi) * (point[1] - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 export function validateFarmPolygon(input: unknown, limits = { min: 1, max: 3000 }) {

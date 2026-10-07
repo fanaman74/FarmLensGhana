@@ -49,7 +49,7 @@ function AreaOverview({ boundary, location, polygon }: { boundary: FarmBoundaryS
     <p className="panel-subtitle">{boundary ? 'The map selection is ready to use with the field tools.' : 'Click Draw farm on the map, add each corner, then choose Finish to create an area report.'}</p>
     <div className="area-overview-list">
       <div><span>Selected place</span><strong>{location.name}</strong><small>{location.region}</small></div>
-      <div><span>Boundary status</span><strong>{boundary ? 'Ready' : polygon.length ? 'In progress' : 'Not drawn'}</strong><small>{boundary ? 'Saved locally in this browser' : 'No completed farm polygon yet'}</small></div>
+      <div><span>Boundary status</span><strong>{boundary ? 'Ready' : polygon.length ? 'In progress' : 'Not drawn'}</strong><small>{boundary ? 'Kept on this page' : 'No completed farm polygon yet'}</small></div>
       <div><span>Estimated area</span><strong>{boundary ? `${boundary.areaHectares.toFixed(2)} ha` : '—'}</strong><small>{boundary ? 'Approximate map measurement' : 'Available after Finish'}</small></div>
       <div><span>Approximate perimeter</span><strong>{boundary ? `${boundary.perimeterKm.toFixed(2)} km` : '—'}</strong><small>{boundary ? 'Distance around the polygon' : 'Available after Finish'}</small></div>
       <div><span>Boundary corners</span><strong>{boundary ? boundary.vertexCount : '—'}</strong><small>{boundary ? 'Map points used' : 'Add at least three points'}</small></div>
@@ -58,7 +58,7 @@ function AreaOverview({ boundary, location, polygon }: { boundary: FarmBoundaryS
     {boundary ? <>
       <div className="provider-note"><strong>Next steps</strong><p>Use the same selected area in Weather for a forecast or Soil for modelled root-zone conditions. Field Scan can search the Sentinel-2 catalogue around the selected location.</p></div>
       <div className="area-overview-links"><a className="btn btn-primary full-btn" href="/weather">Check weather</a><a className="btn full-btn" href="/soil">Read soil</a></div>
-    </> : <div className="provider-note"><Info/><p>The completed report will include area, perimeter, corner count, centre coordinates and links to the next analysis tools. The polygon stays in this browser until you choose an analysis action.</p></div>}
+    </> : <div className="provider-note"><Info/><p>The completed report adds place names, land cover, soil properties, terrain, long-term climate, recent satellite passes and the weather forecast for the area you draw.</p></div>}
   </>;
 }
 function ScanMode({ location, clouds, setClouds, polygon }: { location: { name: string; region: string; latitude: number; longitude: number }; clouds: number; setClouds: (value: number) => void; polygon: number[][] }) {
@@ -87,7 +87,7 @@ function ScanMode({ location, clouds, setClouds, polygon }: { location: { name: 
   };
   return <>
   <p className="eyebrow">Field scan</p><h2 className="panel-title">Find recent satellite scenes</h2><p className="panel-subtitle">Search the free Sentinel-2 catalogue for {location.name}.</p>
-  <p className="meta">Catalogue records only: results are not rendered as imagery or used to identify crops. Clicking Search sends the selected coordinates ({location.latitude.toFixed(3)}, {location.longitude.toFixed(3)}), date range and cloud threshold to Element 84 Earth Search. The drawn boundary stays in this browser and is not sent to the catalogue. Results cover only the small ~4 km × 4 km window around the selected point, not national Ghana coverage.</p>
+  <p className="meta">Catalogue records only: results are not rendered as imagery or used to identify crops. Clicking Search sends the selected coordinates ({location.latitude.toFixed(3)}, {location.longitude.toFixed(3)}), date range and cloud threshold to Element 84 Earth Search. This search uses the selected point, not the drawn boundary. Results cover only the small ~4 km × 4 km window around the selected point, not national Ghana coverage.</p>
   <div className="form-grid"><label><span className="label"><CalendarDays/>From</span><input className="input" type="date" value={from} onChange={(event) => setFrom(event.target.value)}/></label><label><span className="label"><CalendarDays/>To</span><input className="input" type="date" value={to} onChange={(event) => setTo(event.target.value)}/></label></div>
   <label className="range-label" htmlFor="clouds"><span><Cloud/>Maximum cloud cover</span><b>{clouds}%</b></label><input id="clouds" className="range" type="range" min="0" max="80" value={clouds} onChange={(e) => setClouds(Number(e.target.value))}/>
   <div className="scan-checks"><span className="ready">✓ Location selected</span><span className={polygon.length ? 'ready' : ''}>{polygon.length ? '✓ Boundary retained locally' : 'Boundary optional'}</span><span>Sentinel-2 L2A · Earth Search</span></div>

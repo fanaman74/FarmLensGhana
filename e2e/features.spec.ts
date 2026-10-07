@@ -194,3 +194,50 @@ test('Earth Engine endpoints reject visitors testing credentials and unsafe inpu
   expect((await request.post('/api/earth-engine/map', { headers: { Origin: 'https://example.org' }, data: {} })).status()).toBe(403);
   expect((await request.post('/api/earth-engine/map', { headers: { Origin: 'http://127.0.0.1:4321' }, data: { kind: 'cashew', latitude: 0 } })).status()).toBe(400);
 });
+
+test('a drawn farm shows every provider section from the farm report', async ({ page }) => {
+  await page.addInitScript(() => localStorage.removeItem('farmlens-location'));
+  await page.route('**/server.arcgisonline.com/**', route => route.abort());
+  await page.route('**/api/weather?**', route => route.fulfill({ json: weatherFixture([6.7135324, -1.5895691]) }));
+  const ok = <T,>(data: T, source: string) => ({ ok: true, data, source, resolution: 'test' });
+  const depths = (values: number[]) => values.map((value, i) => ({ depth: ['0–5 cm', '5–15 cm', '15–30 cm'][i], value }));
+  const soilProperty = (label: string, unit: string, value: number) => ({ label, unit, byDepth: depths([value, value, value]), topsoil: value });
+  let posted: { type: string; coordinates: number[][][] } | undefined;
+  await page.route('**/api/farm/report', async route => {
+    posted = route.request().postDataJSON();
+    await route.fulfill({ json: {
+      centroid: { latitude: 6.7, longitude: -1.6 }, fetchedAt: '2026-09-05T12:00:00Z',
+      place: ok({ community: 'Ejisu', district: 'Ejisu Municipal District', region: 'Ashanti Region', displayName: 'Ejisu, Ashanti Region, Ghana' }, 'OpenStreetMap Nominatim'),
+      elevation: ok({ centre: 270, min: 262, max: 281, mean: 271, samples: 12 }, 'Open-Meteo Elevation (Copernicus DEM)'),
+      soil: ok({ textureClass: 'Sandy loam', phClass: 'Moderately to slightly acidic', properties: { phh2o: soilProperty('pH (water)', '', 5.9), clay: soilProperty('Clay', '%', 18), sand: soilProperty('Sand', '%', 60), silt: soilProperty('Silt', '%', 22), soc: soilProperty('Organic carbon', 'g/kg', 12), nitrogen: soilProperty('Total nitrogen', 'g/kg', 1.1), cec: soilProperty('Cation exchange capacity', 'cmol(c)/kg', 9), bdod: soilProperty('Bulk density', 'g/cm³', 1.35) } }, 'ISRIC SoilGrids 2.0'),
+      landCover: ok({ year: 2025, croplandPercent: 64.2, classes: [{ code: 5, name: 'Crops', percent: 64.2 }, { code: 2, name: 'Trees', percent: 35.8 }], baseline: { year: 2017, croplandPercent: 40 } }, 'Esri / Impact Observatory 10 m land cover'),
+      climate: ok({ period: '2001–2020', annualRainfallMm: 1420, wettestMonth: 'Jun', monthsOver100mm: 7, months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((month) => ({ month, rainfallMm: 118, maxTemperature: 31, minTemperature: 21, humidity: 80, solar: 5 })) }, 'NASA POWER'),
+      scenes: { ok: false, error: 'The satellite catalogue is unavailable right now.', source: 'Element 84 Earth Search (Sentinel-2 L2A)' },
+    } });
+  });
+  await page.goto('/soil');
+  await expect(page.getByText(/Model sample:/)).toBeVisible();
+  const map = page.locator('.farm-map');
+  await map.scrollIntoViewIfNeeded();
+  const canvas = map.locator('canvas').first();
+  await expect(canvas).toBeVisible();
+  for (let index = 0; index < 6; index += 1) { await page.getByRole('button', { name: 'Zoom in' }).click(); await page.waitForTimeout(400); }
+  await page.getByRole('button', { name: 'Draw farm' }).click();
+  await map.scrollIntoViewIfNeeded();
+  const box = (await canvas.boundingBox())!;
+  await canvas.click({ position: { x: box.width / 2 - 24, y: box.height / 2 - 20 } });
+  await canvas.click({ position: { x: box.width / 2 + 24, y: box.height / 2 - 20 } });
+  await canvas.click({ position: { x: box.width / 2, y: box.height / 2 + 24 } });
+  await page.getByRole('button', { name: /Finish \(3\)/ }).click();
+  const report = page.locator('.boundary-summary');
+  await expect(report).toContainText('Ejisu Municipal District');
+  await expect(report).toContainText('64.2% of the boundary');
+  await expect(report).toContainText('40.0% in 2017');
+  await expect(report).toContainText('Sandy loam');
+  await expect(report).toContainText('270 m above sea level');
+  await expect(report).toContainText('1,420 mm');
+  await expect(report).toContainText('The satellite catalogue is unavailable right now.');
+  await expect(report).toContainText('9–27 cm');
+  expect(posted?.type).toBe('Polygon');
+  expect(posted?.coordinates[0]).toHaveLength(4);
+});

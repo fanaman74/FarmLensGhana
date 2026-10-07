@@ -36,6 +36,12 @@ export interface HourlyForecast {
   rainfall: number | null;
   soilTemperature: number | null;
   soilMoisture: number | null;
+  /** 18 cm soil temperature. */
+  soilTemperatureDeep?: number | null;
+  /** 9–27 cm volumetric water content. */
+  soilMoistureMid?: number | null;
+  /** 27–81 cm volumetric water content. */
+  soilMoistureDeep?: number | null;
 }
 
 export interface WeatherData {

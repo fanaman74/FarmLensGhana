@@ -14,7 +14,8 @@ const forecastSchema = z.object({
   hourly: z.object({
     time: z.array(z.string()), temperature_2m: arrayOfNumbers, relative_humidity_2m: arrayOfNumbers,
     precipitation_probability: arrayOfNumbers, precipitation: arrayOfNumbers,
-    soil_temperature_6cm: arrayOfNumbers, soil_moisture_3_to_9cm: arrayOfNumbers
+    soil_temperature_6cm: arrayOfNumbers, soil_moisture_3_to_9cm: arrayOfNumbers,
+    soil_temperature_18cm: arrayOfNumbers.optional(), soil_moisture_9_to_27cm: arrayOfNumbers.optional(), soil_moisture_27_to_81cm: arrayOfNumbers.optional()
   }),
   daily: z.object({
     time: z.array(z.string()), weather_code: arrayOfNumbers, temperature_2m_max: arrayOfNumbers,
@@ -64,7 +65,7 @@ export async function getWeather(latitude: number, longitude: number): Promise<P
     url.searchParams.set('timezone', 'Africa/Accra');
     url.searchParams.set('forecast_days', '7');
     url.searchParams.set('current', 'temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m');
-    url.searchParams.set('hourly', 'temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,soil_temperature_6cm,soil_moisture_3_to_9cm');
+    url.searchParams.set('hourly', 'temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,soil_temperature_6cm,soil_moisture_3_to_9cm,soil_temperature_18cm,soil_moisture_9_to_27cm,soil_moisture_27_to_81cm');
     url.searchParams.set('daily', 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,et0_fao_evapotranspiration,wind_speed_10m_max,wind_gusts_10m_max');
     const parsed = forecastSchema.safeParse(await fetchJson(url));
     if (!parsed.success) return { ok: false, error: { code: 'missing_data', message: 'The weather provider returned incomplete data.', retryable: true } };
@@ -91,7 +92,8 @@ export async function getWeather(latitude: number, longitude: number): Promise<P
       hourly: raw.hourly.time.map((time, index) => ({
         time, temperature: raw.hourly.temperature_2m[index] ?? null, humidity: raw.hourly.relative_humidity_2m[index] ?? null,
         precipitationProbability: raw.hourly.precipitation_probability[index] ?? null, rainfall: raw.hourly.precipitation[index] ?? null,
-        soilTemperature: raw.hourly.soil_temperature_6cm[index] ?? null, soilMoisture: raw.hourly.soil_moisture_3_to_9cm[index] ?? null
+        soilTemperature: raw.hourly.soil_temperature_6cm[index] ?? null, soilMoisture: raw.hourly.soil_moisture_3_to_9cm[index] ?? null,
+        soilTemperatureDeep: raw.hourly.soil_temperature_18cm?.[index] ?? null, soilMoistureMid: raw.hourly.soil_moisture_9_to_27cm?.[index] ?? null, soilMoistureDeep: raw.hourly.soil_moisture_27_to_81cm?.[index] ?? null
       })), observedAt: raw.current.time
     };
     return { ok: true, data, source: 'Open-Meteo', fetchedAt: new Date().toISOString() };

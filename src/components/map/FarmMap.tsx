@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AttributionControl, Map as MapLibreMap, Marker, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
 import { Crosshair, ExternalLink, Layers3, Minus, Plus, RotateCcw } from 'lucide-react';
-import { validateFarmPolygon } from '../../lib/geo/geojson';
+import { polygonCentroid, polygonPerimeterKm, validateFarmPolygon } from '../../lib/geo/geojson';
 type FeatureCollection = Extract<Parameters<GeoJSONSource['setData']>[0], { type: 'FeatureCollection' }>;
 
 export interface FarmBoundarySummary {
@@ -30,16 +30,6 @@ const imageryStyle = {
   sources: { imagery: { type: 'raster' as const, tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, attribution: 'Esri World Imagery' } },
   layers: [{ id: 'imagery', type: 'raster' as const, source: 'imagery' }]
 };
-
-function distanceKm(a: number[], b: number[]) {
-  const radians = (value: number) => value * Math.PI / 180;
-  const dLat = radians(b[1] - a[1]);
-  const dLon = radians(b[0] - a[0]);
-  const latA = radians(a[1]);
-  const latB = radians(b[1]);
-  const haversine = Math.sin(dLat / 2) ** 2 + Math.cos(latA) * Math.cos(latB) * Math.sin(dLon / 2) ** 2;
-  return 6371 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
-}
 
 export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false, highlights, cropland = false, rasterLayer, onLocation, onPolygon, onFinish }: Props) {
   const container = useRef<HTMLDivElement>(null);
@@ -151,14 +141,12 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
     const ring = [...pointsRef.current, pointsRef.current[0]];
     const result = validateFarmPolygon({ type: 'Polygon', coordinates: [ring] }, { min: .01, max: 3000 });
     if (!result.ok) { setDrawMessage(result.message); return; }
-    const vertices = ring.slice(0, -1);
-    const centroid = vertices.reduce((point, [longitude, latitude]) => ({ longitude: point.longitude + longitude, latitude: point.latitude + latitude }), { longitude: 0, latitude: 0 });
     const summary: FarmBoundarySummary = {
       coordinates: ring,
       areaHectares: result.areaHectares,
-      perimeterKm: ring.slice(0, -1).reduce((total, point, index) => total + distanceKm(point, ring[index + 1]), 0),
-      vertexCount: vertices.length,
-      centroid: { latitude: centroid.latitude / vertices.length, longitude: centroid.longitude / vertices.length },
+      perimeterKm: polygonPerimeterKm(ring),
+      vertexCount: ring.length - 1,
+      centroid: polygonCentroid(ring),
     };
     callbacks.current.onPolygon?.(ring);
     callbacks.current.onFinish?.(summary);
