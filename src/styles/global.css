@@ -81,6 +81,7 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
 .dashboard-shell { min-height: 720px; display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(350px, .72fr); gap: 12px; }
 .map-stage { position: relative; min-height: 720px; overflow: hidden; }
 .farm-map-wrap, .farm-map { width: 100%; height: 100%; min-height: inherit; }
+.farm-map-wrap { position: relative; }
 .farm-map { background: #183a2a; }
 .farm-map::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(3,15,9,.17), transparent 40%, rgba(3,15,9,.25)); }
 .maplibregl-canvas { outline: 0; }
@@ -107,7 +108,10 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
 .location-search input::placeholder { color: #819787; }
 .search-results { position: absolute; z-index: 10; top: calc(100% + 8px); left: 0; right: 0; overflow: hidden; padding: 7px; border: 1px solid rgba(173,205,184,.2); border-radius: 15px; background: #102d20; box-shadow: 0 24px 50px rgba(0,0,0,.4); }
 .search-results button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px; border: 0; border-radius: 10px; cursor: pointer; color: #f4f1de; text-align: left; background: transparent; }
-.search-results button:hover { background: rgba(184,239,101,.09); }
+.search-results button:hover, .search-results button[data-active='true'] { background: rgba(184,239,101,.09); }
+.search-results p { margin: 6px 8px; line-height: 1.45; }
+.search-clear { display: grid; flex: 0 0 auto; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; color: #91a695; background: transparent; }
+.search-clear:hover, .search-clear:focus-visible { color: #f4f1de; background: rgba(184,239,101,.12); }
 .search-results span { display: flex; flex-direction: column; }
 .search-results small, .search-results p { color: #91a695; font-size: 11px; }
 .spin { animation: spin 1s linear infinite; }
@@ -145,8 +149,9 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
 .error-state { margin-block: 20px; padding: 20px; border: 1px solid rgba(223,125,114,.28); border-radius: 16px; background: rgba(223,125,114,.06); }
 .error-state span, .error-state b { color: #f1a59b; }
 .error-state p { color: #9bb5a4; font-size: 13px; }
-.weather-toolbar { display: flex; gap: 10px; margin-bottom: 12px; }
-.weather-toolbar .location-search { flex: 1; }
+.weather-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
+.toolbar-message { flex-basis: 100%; margin: 0; color: #d7c08f; font-size: 13px; }
+.weather-toolbar .location-search { flex: 1 1 260px; }
 .weather-hero { display: grid; grid-template-columns: minmax(280px, .75fr) 1.5fr; align-items: center; gap: 28px; margin-bottom: 12px; }
 .weather-place { display: flex; align-items: center; gap: 18px; }
 .weather-place .weather-glyph { font-size: 62px; }
@@ -209,6 +214,8 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
 .satellite-panel { min-width: 0; }
 .satellite-map.mobile-hidden { display: none; }
 .satellite-grid:has(.mobile-hidden) { grid-template-columns: 1fr; }
+/* Map and panel sit side by side on wide screens, so the Map / Analytics switch only matters on phones. */
+@media (min-width: 921px) { .view-toggle { display: none; } .satellite-map.mobile-hidden { display: block; } .satellite-grid:has(.mobile-hidden) { grid-template-columns: minmax(0, 1.55fr) minmax(340px, .65fr); } }
 .panel-title { margin: 0; font-size: 27px; line-height: 1.08; letter-spacing: -.045em; }
 .panel-subtitle { margin: 10px 0 20px; color: #93a797; font-size: 13px; line-height: 1.6; }
 .satellite-panel .input { margin-bottom: 15px; }
@@ -295,7 +302,9 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
   .map-badge { display: none; }
   .map-zoom { top: auto; right: 12px; bottom: 70px; }
   .map-location { left: 12px; right: auto; bottom: 12px; }
-  .weather-toolbar { flex-direction: column; }
+  .weather-toolbar { flex-direction: column; align-items: stretch; }
+  .weather-toolbar .location-search { flex: none; }
+  .weather-toolbar .chip { align-self: flex-start; }
   .daily-row { grid-template-columns: 1fr auto; }
   .daily-row > span:nth-child(3) { display: none; }
   .daily-condition { justify-content: end; }
@@ -338,10 +347,11 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 
 /* Information architecture */
-.nav { align-items: center; gap: 11px; }
-.nav-overview { color: #f4f1de !important; }
-.nav-group { display: flex; align-items: center; gap: 2px; }
-.nav-group-label { margin-right: 2px; color: #718879; font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+.nav { align-items: center; gap: 2px; }
+.nav a { white-space: nowrap; }
+.nav a[aria-current='page'] { color: #b8ef65; }
+.nav-divider { width: 1px; height: 20px; margin: 0 6px; background: rgba(173,205,184,.18); }
+.nav-secondary { font-size: 13px !important; }
 .workflow-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .workflow-card { min-height: 190px; display: flex; flex-direction: column; align-items: flex-start; gap: 18px; padding: 18px; transition: transform .18s ease, border-color .18s ease; }
 .workflow-card > span { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 9px; color: #102519; background: #b8ef65; font-size: 10px; font-weight: 800; }
@@ -373,33 +383,19 @@ button, a, input, select { -webkit-tap-highlight-color: transparent; }
 .service-note h3 { margin: 0; font-size: 15px; }
 .service-note > p:last-child { margin: 8px 0 0; color: #91a695; font-size: 11px; line-height: 1.55; }
 @media (max-width: 1100px) {
-  .nav { gap: 5px; }
-  .nav-group-label { display: none; }
+  .nav a { padding: 9px 9px; font-size: 13px; }
   .workflow-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 920px) {
   .nav { align-items: stretch; gap: 2px; }
-  .nav-overview { margin-bottom: 4px; }
-  .nav-group { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding-top: 4px; border-top: 1px solid rgba(173,205,184,.1); }
-  .nav-group-label { display: block; padding: 7px 13px 3px; }
-  .nav-group a { padding: 9px 13px; }
+  .nav a { padding: 11px 13px; font-size: 15px; }
+  .nav-divider { width: auto; height: 1px; margin: 5px 8px; }
   .service-job-grid, .service-notes { grid-template-columns: 1fr; }
 }
 @media (max-width: 540px) {
   .workflow-grid { grid-template-columns: 1fr; }
   .workflow-card { min-height: 0; }
 }
-/* Top-level menu dropdowns */
-.nav-dropdown { position: relative; }
-.nav-dropdown > summary { list-style: none; cursor: pointer; padding: 10px 9px; border-radius: 999px; color: #9bb5a4; font-size: 12px; font-weight: 800; }
-.nav-dropdown > summary::-webkit-details-marker { display: none; }
-.nav-dropdown > summary::after { content: '⌄'; display: inline-block; margin-left: 6px; color: #718879; font-size: 11px; transform: translateY(-1px); }
-.nav-dropdown > summary:hover, .nav-dropdown[open] > summary { color: #f4f1de; background: rgba(184,239,101,.1); }
-.nav-dropdown > summary:hover::after, .nav-dropdown[open] > summary::after { color: #b8ef65; }
-.nav-dropdown-menu { position: absolute; z-index: 20; top: calc(100% + 7px); left: 0; min-width: 185px; display: grid; gap: 3px; padding: 8px; border: 1px solid rgba(173,205,184,.2); border-radius: 14px; background: #102d20; box-shadow: 0 20px 40px rgba(0,0,0,.35); }
-.nav-dropdown-menu a { display: block; white-space: nowrap; }
-.nav-dropdown-menu a[aria-current='page'] { color: #b8ef65; background: rgba(184,239,101,.1); }
-
 /* Farm boundary completion report */
 .boundary-summary { margin-top: 12px; }
 .boundary-summary-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }

@@ -1,11 +1,11 @@
 ---
 import { APP } from '../config';
 const { pathname } = Astro.url;
-const groups = [
-  { label: 'Monitor', links: [['/weather', 'Weather'], ['/soil', 'Soil']] },
-  { label: 'Explore', links: [['/satellite', 'Satellite'], ['/crop-finder', 'Crop finder'], ['/crops', 'Crop library']] },
-  { label: 'Reference', links: [['/services', 'Data services'], ['/settings', 'Settings']] },
+// Every workspace is one click away; the reference pages sit at the end.
+const links = [
+  ['/weather', 'Weather'], ['/soil', 'Soil'], ['/satellite', 'Satellite'], ['/crop-finder', 'Crop finder'], ['/crops', 'Crops'],
 ];
+const secondary = [['/services', 'Data services'], ['/settings', 'Settings']];
 const isCurrent = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href));
 ---
 <header class="topbar">
@@ -16,20 +16,19 @@ const isCurrent = (href: string) => pathname === href || (href !== '/' && pathna
   <button class="menu-button" id="menu-button" aria-controls="primary-nav" aria-expanded="false">Menu</button>
   <nav class="nav" id="primary-nav" aria-label="Primary navigation">
     <a class="nav-overview" href="/" aria-current={isCurrent('/') ? 'page' : undefined}>Overview</a>
-    {groups.map((group) => <details class="nav-dropdown">
-      <summary>{group.label}</summary>
-      <div class="nav-dropdown-menu">
-        {group.links.map(([href, label]) => <a href={href} aria-current={isCurrent(href) ? 'page' : undefined}>{label}</a>)}
-      </div>
-    </details>)}
+    {links.map(([href, label]) => <a href={href} aria-current={isCurrent(href) ? 'page' : undefined}>{label}</a>)}
+    <span class="nav-divider" aria-hidden="true" />
+    {secondary.map(([href, label]) => <a class="nav-secondary" href={href} aria-current={isCurrent(href) ? 'page' : undefined}>{label}</a>)}
   </nav>
 </header>
 <script>
   const button = document.querySelector<HTMLButtonElement>('#menu-button');
   const nav = document.querySelector<HTMLElement>('#primary-nav');
-  button?.addEventListener('click', () => {
-    const open = button.getAttribute('aria-expanded') !== 'true';
-    button.setAttribute('aria-expanded', String(open));
+  const setOpen = (open: boolean) => {
+    button?.setAttribute('aria-expanded', String(open));
     nav?.setAttribute('data-open', String(open));
-  });
+  };
+  button?.addEventListener('click', () => setOpen(button.getAttribute('aria-expanded') !== 'true'));
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && nav?.dataset.open === 'true') { setOpen(false); button?.focus(); } });
+  document.addEventListener('pointerdown', (event) => { const target = event.target as Node; if (nav?.dataset.open === 'true' && !nav.contains(target) && !button?.contains(target)) setOpen(false); });
 </script>

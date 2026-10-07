@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AttributionControl, Map as MapLibreMap, Marker, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
 import { Crosshair, ExternalLink, Layers3, Minus, Plus, RotateCcw } from 'lucide-react';
 import { validateFarmPolygon } from '../../lib/geo/geojson';
+import { locateUser } from '../../lib/location/savedLocation';
 type FeatureCollection = Extract<Parameters<GeoJSONSource['setData']>[0], { type: 'FeatureCollection' }>;
 
 export interface FarmBoundarySummary {
@@ -16,6 +17,8 @@ interface Props {
   latitude: number;
   longitude: number;
   zoom?: number;
+  /** Zoom in to at least this level when the selected location changes, so a searched place opens at field scale. */
+  focusZoom?: number;
   drawing?: boolean;
   highlights?: FeatureCollection;
   cropland?: boolean;
@@ -41,7 +44,7 @@ function distanceKm(a: number[], b: number[]) {
   return 6371 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
-export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false, highlights, cropland = false, rasterLayer, onLocation, onPolygon, onFinish }: Props) {
+export default function FarmMap({ latitude, longitude, zoom = 7, focusZoom, drawing = false, highlights, cropland = false, rasterLayer, onLocation, onPolygon, onFinish }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -113,9 +116,13 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
     return () => { map.remove(); mapRef.current = null; };
   }, []);
 
+  const shownCentre = useRef(`${latitude},${longitude}`);
   useEffect(() => {
     markerRef.current?.setLngLat([longitude, latitude]);
-    mapRef.current?.easeTo({ center: [longitude, latitude], duration: 650 });
+    const map = mapRef.current;
+    const moved = shownCentre.current !== `${latitude},${longitude}`;
+    shownCentre.current = `${latitude},${longitude}`;
+    map?.easeTo({ center: [longitude, latitude], ...(moved && focusZoom ? { zoom: Math.max(map.getZoom(), focusZoom) } : {}), duration: 650 });
   }, [latitude, longitude]);
 
   useEffect(() => {
@@ -192,7 +199,8 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
     callbacks.current.onFinish?.(null);
   };
 
-  const locate = () => navigator.geolocation?.getCurrentPosition((position) => onLocation?.(position.coords.latitude, position.coords.longitude));
+  const [locateMessage, setLocateMessage] = useState('');
+  const locate = () => { setLocateMessage('Finding your location…'); locateUser((lat, lng) => { setLocateMessage(''); onLocation?.(lat, lng); }, setLocateMessage); };
 
   return <div className="farm-map-wrap">
     <div ref={container} className="farm-map" aria-label="Interactive satellite map centred on Ghana" />
@@ -202,12 +210,12 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
       {screenCursor && screenPoints.length > 0 && <line x1={screenPoints.at(-1)![0]} y1={screenPoints.at(-1)![1]} x2={screenCursor[0]} y2={screenCursor[1]} stroke="#fff" strokeWidth="2" strokeDasharray="6 4"/>}
       {screenPoints.map((point, i) => <circle key={i} cx={point[0]} cy={point[1]} r="5" fill="#fff" stroke="#456725" strokeWidth="2"/>)}
     </svg>}
-    {mapError && <p role="status" className="map-error">{mapError}</p>}
+    {(locateMessage || mapError) && <p role="status" className="map-error">{locateMessage || mapError}</p>}
     <div className="map-badge"><span className="chip-dot" /> Satellite · Ghana</div>
     <div className="map-zoom" aria-label="Map controls">
       <button onClick={() => mapRef.current?.zoomIn()} aria-label="Zoom in" title="Zoom in"><Plus size={18} /></button>
       <button onClick={() => mapRef.current?.zoomOut()} aria-label="Zoom out" title="Zoom out"><Minus size={18} /></button>
-      <button onClick={locate} aria-label="Use my location" title="Use my location"><Crosshair size={18} /></button>
+      {onLocation && <button onClick={locate} aria-label="Use my location" title="Use my location"><Crosshair size={18} /></button>}
       <a href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${latitude},${longitude}`} target="_blank" rel="noreferrer" aria-label="Open Street View at this location" title="Open Street View"><ExternalLink size={17} /></a>
     </div>
     {drawing && <div className="draw-controls">

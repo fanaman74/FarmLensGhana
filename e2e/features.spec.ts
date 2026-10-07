@@ -38,9 +38,9 @@ test('monthly outlook follows the selected place and renders 30 days', async ({ 
   await page.route('**/api/weather/monthly?**', route => route.fulfill({ json: { grid: { latitude: 9.4, longitude: -.8 }, fetchedAt: '2026-09-05T12:00:00Z', days: Array.from({ length: 30 }, (_, i) => ({ date: `2026-09-${String(i+1).padStart(2,'0')}`, high: 30, low: 22, rain: 3 })) } }));
   await page.route('**/api/geocode?**', route => route.fulfill({ json: { results: [{ id: 1, name: 'Tamale', region: 'Northern', latitude: 9.4, longitude: -.8 }] } }));
   await page.goto('/soil');
-  await page.getByRole('textbox', { name: 'Search Ghanaian town or district' }).fill('Tamale');
+  await page.getByRole('combobox', { name: 'Search Ghanaian town or district' }).fill('Tamale');
   const request = page.waitForRequest(r => r.url().includes('/api/weather/monthly?latitude=9.4&longitude=-0.8'));
-  await page.getByRole('button', { name: /Tamale/ }).click();
+  await page.getByRole('option', { name: /Tamale/ }).click();
   await request;
   await expect(page.getByRole('region', { name: 'Monthly weather outlook' })).toContainText('Tamale');
   await expect(page.locator('.outlook-day')).toHaveCount(30);
@@ -171,11 +171,11 @@ test('crop finder separates crop request from newer generic land cover', async (
   await page.route('**/api/geocode?**', route => route.fulfill({ json: { results: [{ id: 1, name: 'Kumasi', region: 'Ashanti', latitude: 6.68, longitude: -1.62 }] } }));
   await page.route('**/api/satellite/recent?**', route => route.fulfill({ json: { scenes: [{ id: 'test-scene', date: '2026-09-02T10:00:00Z', cloud: 20 }] } }));
   await page.goto('/crop-finder');
-  await page.getByRole('textbox', { name: 'Search Ghanaian town or district' }).fill('Kumasi');
-  await page.getByRole('button', { name: /Kumasi/ }).click();
-  await expect(page.getByRole('textbox', { name: 'Search Ghanaian town or district' })).toHaveValue('Kumasi, Ashanti');
+  await page.getByRole('combobox', { name: 'Search Ghanaian town or district' }).fill('Kumasi');
+  await page.getByRole('option', { name: /Kumasi/ }).click();
+  await expect(page.getByRole('combobox', { name: 'Search Ghanaian town or district' })).toHaveValue('Kumasi, Ashanti');
   await expect(page.getByText('Selected: Kumasi, Ashanti')).toBeVisible();
-  await page.getByPlaceholder('For example, Maize').fill('Cocoa');
+  await page.getByRole('combobox', { name: /Choose crop/ }).selectOption('cocoa');
   await page.getByRole('button', { name: 'Explore crop area' }).click();
   await expect(page.getByRole('heading', { name: 'Cocoa imagery search' })).toBeVisible();
   await expect(page.getByText('Overlay: 2025 annual cropland.')).toBeVisible();
@@ -193,4 +193,20 @@ test('Earth Engine endpoints reject visitors testing credentials and unsafe inpu
   expect((await request.post('/api/settings/earth-engine/test', { headers: { Origin: 'http://127.0.0.1:4321' } })).status()).toBe(401);
   expect((await request.post('/api/earth-engine/map', { headers: { Origin: 'https://example.org' }, data: {} })).status()).toBe(403);
   expect((await request.post('/api/earth-engine/map', { headers: { Origin: 'http://127.0.0.1:4321' }, data: { kind: 'cashew', latitude: 0 } })).status()).toBe(400);
+});
+
+test('a place chosen in one workspace opens in the others', async ({ page }) => {
+  await page.route('**/api/geocode?**', route => route.fulfill({ json: { results: [{ id: 1, name: 'Tamale', region: 'Northern', latitude: 9.4, longitude: -.8 }, { id: 2, name: 'Tamale Port', region: 'Northern', latitude: 9.5, longitude: -.9 }] } }));
+  await page.goto('/satellite');
+  const search = page.getByRole('combobox', { name: 'Search Ghanaian town or district' });
+  await search.fill('Tam');
+  await expect(page.getByRole('option')).toHaveCount(2);
+  await search.press('ArrowDown');
+  await search.press('ArrowDown');
+  await search.press('Enter');
+  await expect(search).toHaveValue('Tamale Port, Northern');
+  await page.goto('/crop-finder');
+  await expect(page.getByText('Selected: Tamale Port, Northern')).toBeVisible();
+  await page.goto('/weather');
+  await expect(page.getByRole('combobox', { name: 'Search Ghanaian town or district' })).toHaveAttribute('placeholder', /Tamale Port/);
 });

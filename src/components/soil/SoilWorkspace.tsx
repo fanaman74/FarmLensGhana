@@ -4,6 +4,7 @@ import FarmMap, { type FarmBoundarySummary } from '../map/FarmMap';
 import BoundarySummary from '../map/BoundarySummary';
 import LocationSearch, { type Place } from '../dashboard/LocationSearch';
 import { useWeather } from '../weather/useWeather';
+import { locateUser } from '../../lib/location/savedLocation';
 import MonthlyOutlook from './MonthlyOutlook';
 
 const initial = { name: 'Kumasi', region: 'Ashanti', latitude: 6.6885, longitude: -1.6244 };
@@ -15,6 +16,8 @@ export default function SoilWorkspace() {
     setBoundary(summary);
     if (summary) state.setLocation({ name: 'Selected farm centre', region: `${summary.centroid.latitude.toFixed(3)}, ${summary.centroid.longitude.toFixed(3)}`, latitude: summary.centroid.latitude, longitude: summary.centroid.longitude });
   };
+  const [locateMessage, setLocateMessage] = useState('');
+  const useLocation = () => { setLocateMessage('Finding your location…'); locateUser((latitude, longitude) => { setLocateMessage(''); state.setLocation({ name: 'Your location', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude }); }, setLocateMessage); };
   const currentHour = state.weather?.hourly.find((hour) => hour.time >= state.weather!.current.time.slice(0,13) + ':00');
   const rain7 = state.weather?.daily.reduce((sum, day) => sum + day.rainfall, 0) ?? 0;
   const et7 = state.weather?.daily.reduce((sum, day) => sum + day.et0, 0) ?? 0;
@@ -25,9 +28,9 @@ export default function SoilWorkspace() {
   const modelSampleTime = state.weather ? currentHour ? new Date(`${currentHour.time}Z`).toLocaleString('en-GH', { timeZone: 'Africa/Accra', dateStyle: 'medium', timeStyle: 'short' }) : 'Unavailable' : '';
 
   return <div className="soil-workspace">
-    <div className="weather-toolbar panel panel-pad"><LocationSearch onSelect={(place: Place) => state.setLocation(place)} /><span className="chip"><span className="chip-dot"/> Model estimate</span></div>
+    <div className="weather-toolbar panel panel-pad"><LocationSearch current={state.location.name} onSelect={(place: Place) => state.setLocation(place)} /><button className="btn" onClick={useLocation}>Use my location</button><span className="chip"><span className="chip-dot"/> Model estimate</span>{locateMessage && <p role="status" className="toolbar-message">{locateMessage}</p>}</div>
     <div className="soil-grid">
-      <section className="soil-map panel"><FarmMap latitude={state.location.latitude} longitude={state.location.longitude} drawing onFinish={finishBoundary} onPolygon={(coordinates) => { if (!coordinates.length) setBoundary(null); }} onLocation={(latitude, longitude) => state.setLocation({ name: 'Selected field', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude })} /></section>
+      <section className="soil-map panel"><FarmMap latitude={state.location.latitude} longitude={state.location.longitude} focusZoom={13} drawing onFinish={finishBoundary} onPolygon={(coordinates) => { if (!coordinates.length) setBoundary(null); }} onLocation={(latitude, longitude) => state.setLocation({ name: 'Selected field', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude })} /></section>
       <section className="panel panel-pad soil-insights">
         <div className="section-heading"><div><p className="eyebrow">Near {state.location.name}</p><h2>Root-zone snapshot</h2><p>Modelled conditions—not field sensors.</p><p className="meta">Selected point: {state.location.latitude.toFixed(4)}°, {state.location.longitude.toFixed(4)}°{state.weather && <> · Provider grid: {state.weather.location.latitude.toFixed(3)}°, {state.weather.location.longitude.toFixed(3)}° · Model sample: {modelSampleTime}{modelSampleTime !== 'Unavailable' && ' GMT'}</>}</p></div></div>{state.weather && <div className="provider-note warning soil-model-note"><Info/><div><strong>Map colours are not soil readings</strong><p>The satellite image is a basemap for visual context. These values come from the provider model grid above, not field-level measurements. Nearby points can share a model area; soil estimates do not resolve individual fields. Check field conditions directly.</p>{state.gridComparison && <p role="status"><strong>Same model area as your previous point.</strong> Both selections use provider grid {state.gridComparison.current.latitude.toFixed(3)}°, {state.gridComparison.current.longitude.toFixed(3)}°, so soil estimates may match.</p>}</div></div>}
         {state.loading && <div role="status" className="skeleton sk-lg">Loading model estimates for the selected point…</div>}
