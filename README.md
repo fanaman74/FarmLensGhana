@@ -22,7 +22,8 @@ Known remaining work:
 - Current weather, hourly rain, ET₀, modelled soil moisture, and soil temperature
 - Transparent threshold-based farming notices
 - Searchable ten-crop draft library and live weather context
-- MapLibre satellite basemap with point selection and local GeoJSON boundary drawing
+- MapLibre satellite basemap with point selection and GeoJSON boundary drawing
+- Drawn-farm report with place names, land cover share, SoilGrids soil properties, elevation, NASA POWER climate normals and recent Sentinel-2 passes (all free, keyless providers; see [docs/data-providers.md](docs/data-providers.md))
 - Satellite provider selection and honest missing-credential states
 - Locked AI Crop Map until a validated Ghana-trained OlmoEarth model is configured
 - Browser-local visitor preferences

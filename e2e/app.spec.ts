@@ -19,6 +19,6 @@ test('satellite field scan posts filters and renders catalogue scenes', async ({
   await page.locator('input[type="range"]').fill('12');
   await page.getByRole('button',{name:/Search catalogue/i}).click();
   await expect(page.getByText('test-scene', { exact: false })).toBeVisible();
-  await expect(page.getByText(/boundary stays in this browser/i)).toBeVisible();
+  await expect(page.getByText(/uses the selected point, not the drawn boundary/i)).toBeVisible();
 });
 test('settings protects integration status', async ({ page }) => { await page.goto('/settings'); await expect(page.getByRole('heading',{name:'Administrator access'})).toBeVisible(); });
