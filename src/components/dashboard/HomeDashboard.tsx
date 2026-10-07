@@ -1,24 +1,45 @@
 import { ArrowRight, CloudRain, Droplets, Gauge, Leaf, Navigation, Wind } from 'lucide-react';
-import FarmMap from '../map/FarmMap';
+import { useState } from 'react';
+import FarmMap, { type MapFrame } from '../map/FarmMap';
+import CityCarousel from './CityCarousel';
+import { ghanaBounds, ghanaCities } from '../../data/ghanaCities';
 import { useWeather } from '../weather/useWeather';
 import { weatherIcon, weatherLabel, formatDay } from '../weather/weatherUtils';
 import { buildAdvisories } from '../../lib/agriculture/advisoryRules';
 
 const initial = { name: 'Kumasi', region: 'Ashanti', latitude: 6.6885, longitude: -1.6244 };
 
+// Keep all of Ghana in view, centred in the space the city panel leaves free.
+const ghanaFrame: MapFrame = {
+  bounds: ghanaBounds,
+  padding: (width, height) => width < 700
+    ? { top: 24, right: 24, left: 24, bottom: Math.min(height * .55, 380) }
+    : { top: 40, bottom: 40, right: 80, left: Math.min(420, width * .45) },
+};
+
 export default function HomeDashboard() {
   const { location, setLocation, weather, source, updatedAt, loading, error, retry } = useWeather(initial);
   const current = weather?.current;
   const today = weather?.daily[0];
   const notices = buildAdvisories(weather?.daily ?? []);
+  const [activeCity, setActiveCity] = useState(() => Math.max(0, ghanaCities.findIndex((city) => city.id === 'kumasi')));
 
   return <div className="dashboard-shell">
     <section className="map-stage panel">
-      <FarmMap latitude={location.latitude} longitude={location.longitude} onLocation={(latitude, longitude) => setLocation({ name: 'Selected field', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude })} />
+      <FarmMap
+        latitude={location.latitude}
+        longitude={location.longitude}
+        frame={ghanaFrame}
+        followLocation={false}
+        places={ghanaCities}
+        activePlace={ghanaCities[activeCity].id}
+        onPlace={(id) => setActiveCity(Math.max(0, ghanaCities.findIndex((city) => city.id === id)))}
+        onLocation={(latitude, longitude) => setLocation({ name: 'Selected field', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude })}
+      />
       <div className="map-overlay intro-card">
         <div className="eyebrow">Field intelligence for Ghana</div>
-        <h1>See what your land<br />is telling you.</h1>
-        <p>Local forecasts, modelled soil conditions and satellite context—together in one calm view.</p>
+        <h1>See what your land is telling you.</h1>
+        <CityCarousel cities={ghanaCities} active={activeCity} onActive={setActiveCity} onUse={(city) => setLocation({ name: city.name, region: city.region, latitude: city.latitude, longitude: city.longitude })} />
       </div>
       <div className="map-overlay map-location"><Navigation size={14} /><span>{location.name}<small>{location.region}</small></span></div>
     </section>

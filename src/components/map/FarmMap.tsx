@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { AttributionControl, Map as MapLibreMap, Marker, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
-import { Crosshair, ExternalLink, Layers3, Minus, Plus, RotateCcw } from 'lucide-react';
+import { AttributionControl, Map as MapLibreMap, Marker, type GeoJSONSource, type MapMouseEvent, type PaddingOptions } from 'maplibre-gl';
+import { Crosshair, ExternalLink, Layers3, Maximize, Minus, Plus, RotateCcw } from 'lucide-react';
 import { validateFarmPolygon } from '../../lib/geo/geojson';
 type FeatureCollection = Extract<Parameters<GeoJSONSource['setData']>[0], { type: 'FeatureCollection' }>;
 
@@ -12,6 +12,10 @@ export interface FarmBoundarySummary {
   centroid: { latitude: number; longitude: number };
 }
 
+export interface MapPlace { id: string; name: string; latitude: number; longitude: number; }
+export interface MapOverlay { id: string; tiles: string; opacity: number; attribution: string; minzoom?: number; }
+export interface MapFrame { bounds: [[number, number], [number, number]]; padding: (width: number, height: number) => PaddingOptions; }
+
 interface Props {
   latitude: number;
   longitude: number;
@@ -20,9 +24,19 @@ interface Props {
   highlights?: FeatureCollection;
   cropland?: boolean;
   rasterLayer?: { tileUrl: string; bounds: number[]; title: string } | null;
+  /** An external XYZ/WMS imagery layer drawn above the basemap and below the farm boundary. */
+  overlay?: MapOverlay | null;
   onLocation?: (latitude: number, longitude: number) => void;
   onPolygon?: (coordinates: number[][]) => void;
   onFinish?: (summary: FarmBoundarySummary | null) => void;
+  /** Opens framed on these bounds instead of the location, and offers a button to return to them. */
+  frame?: MapFrame;
+  /** When false, selecting a location moves the marker without panning the map. */
+  followLocation?: boolean;
+  places?: MapPlace[];
+  activePlace?: string;
+  onPlace?: (id: string) => void;
+  onZoom?: (zoom: number) => void;
 }
 
 const imageryStyle = {
@@ -41,7 +55,7 @@ function distanceKm(a: number[], b: number[]) {
   return 6371 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
-export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false, highlights, cropland = false, rasterLayer, onLocation, onPolygon, onFinish }: Props) {
+export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false, highlights, cropland = false, rasterLayer, overlay, onLocation, onPolygon, onFinish, frame, followLocation = true, places, activePlace, onPlace, onZoom }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -54,8 +68,16 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
   const [drawMessage, setDrawMessage] = useState('');
   const [screenPoints, setScreenPoints] = useState<number[][]>([]);
   const [screenCursor, setScreenCursor] = useState<number[] | null>(null);
-  const callbacks = useRef({ onLocation, onPolygon, onFinish, highlights });
-  callbacks.current = { onLocation, onPolygon, onFinish, highlights };
+  const placeMarkers = useRef(new Map<string, Marker>());
+  const callbacks = useRef({ onLocation, onPolygon, onFinish, highlights, onPlace, frame, onZoom });
+  callbacks.current = { onLocation, onPolygon, onFinish, highlights, onPlace, frame, onZoom };
+
+  const fitFrame = (map: MapLibreMap, animate: boolean) => {
+    const target = callbacks.current.frame;
+    if (!target) return;
+    const { clientWidth, clientHeight } = map.getContainer();
+    map.fitBounds(target.bounds, { padding: target.padding(clientWidth, clientHeight), animate, duration: 700 });
+  };
 
   useEffect(() => {
     if (!container.current || mapRef.current) return;
@@ -108,6 +130,8 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
     });
     map.on('move', () => updatePolygon(map, pointsRef.current));
     map.on('resize', () => updatePolygon(map, pointsRef.current));
+    map.on('zoomend', () => callbacks.current.onZoom?.(map.getZoom()));
+    if (callbacks.current.frame) fitFrame(map, false);
     mapRef.current = map;
     setReady(true);
     return () => { map.remove(); mapRef.current = null; };
@@ -115,8 +139,37 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
 
   useEffect(() => {
     markerRef.current?.setLngLat([longitude, latitude]);
-    mapRef.current?.easeTo({ center: [longitude, latitude], duration: 650 });
+    if (followLocation) mapRef.current?.easeTo({ center: [longitude, latitude], duration: 650 });
   }, [latitude, longitude]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const markers = placeMarkers.current;
+    const wanted = new Set((places ?? []).map((place) => place.id));
+    for (const [id, marker] of markers) if (!wanted.has(id)) { marker.remove(); markers.delete(id); }
+    for (const place of places ?? []) {
+      if (markers.has(place.id)) continue;
+      const element = document.createElement('button');
+      element.type = 'button';
+      element.className = 'place-marker';
+      element.title = place.name;
+      element.setAttribute('aria-label', `Show ${place.name}`);
+      element.innerHTML = `<span class="place-dot"></span><span class="place-label"></span>`;
+      element.querySelector('.place-label')!.textContent = place.name;
+      element.addEventListener('click', (event) => { event.stopPropagation(); callbacks.current.onPlace?.(place.id); });
+      markers.set(place.id, new Marker({ element }).setLngLat([place.longitude, place.latitude]).addTo(map));
+    }
+  }, [places, ready]);
+
+  useEffect(() => {
+    for (const [id, marker] of placeMarkers.current) {
+      const element = marker.getElement();
+      const active = id === activePlace;
+      element.classList.toggle('active', active);
+      element.setAttribute('aria-pressed', String(active));
+    }
+  }, [activePlace, places, ready]);
 
   useEffect(() => {
     (mapRef.current?.getSource('crop-highlights') as GeoJSONSource | undefined)?.setData(highlights ?? { type: 'FeatureCollection', features: [] });
@@ -134,6 +187,16 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
       map.fitBounds([[rasterLayer.bounds[0],rasterLayer.bounds[1]],[rasterLayer.bounds[2],rasterLayer.bounds[3]]], { padding: 50, maxZoom: 15 });
     }
   }, [rasterLayer, styleReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !styleReady) return;
+    if (map.getLayer('imagery-overlay')) map.removeLayer('imagery-overlay');
+    if (map.getSource('imagery-overlay')) map.removeSource('imagery-overlay');
+    if (!overlay) return;
+    map.addSource('imagery-overlay', { type: 'raster', tiles: [overlay.tiles], tileSize: 256, minzoom: overlay.minzoom ?? 0, maxzoom: 18, attribution: overlay.attribution });
+    map.addLayer({ id: 'imagery-overlay', type: 'raster', source: 'imagery-overlay', paint: { 'raster-opacity': overlay.opacity } }, 'farm-fill');
+  }, [overlay?.id, styleReady]);
 
   const updatePolygon = (map: MapLibreMap, points: number[][], cursor?: number[]) => {
     // Screen-space feedback remains visible even while WebGL tiles/workers load.
@@ -207,6 +270,7 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
     <div className="map-zoom" aria-label="Map controls">
       <button onClick={() => mapRef.current?.zoomIn()} aria-label="Zoom in" title="Zoom in"><Plus size={18} /></button>
       <button onClick={() => mapRef.current?.zoomOut()} aria-label="Zoom out" title="Zoom out"><Minus size={18} /></button>
+      {frame && <button onClick={() => mapRef.current && fitFrame(mapRef.current, true)} aria-label="Show all of Ghana" title="Show all of Ghana"><Maximize size={17} /></button>}
       <button onClick={locate} aria-label="Use my location" title="Use my location"><Crosshair size={18} /></button>
       <a href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${latitude},${longitude}`} target="_blank" rel="noreferrer" aria-label="Open Street View at this location" title="Open Street View"><ExternalLink size={17} /></a>
     </div>

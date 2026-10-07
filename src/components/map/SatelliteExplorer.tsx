@@ -3,6 +3,8 @@ import { BarChart3, CalendarDays, Cloud, Info, Layers3, Map as MapIcon, ScanLine
 import FarmMap, { type FarmBoundarySummary } from './FarmMap';
 import BoundarySummary from './BoundarySummary';
 import LocationSearch, { type Place } from '../dashboard/LocationSearch';
+import ImageryLayerPicker from './ImageryLayerPicker';
+import { imageryLayers, type ImageryLayer } from '../../data/imageryLayers';
 
 type Mode = 'crop' | 'scan' | 'ai';
 type View = 'map' | 'analytics';
@@ -16,6 +18,8 @@ export default function SatelliteExplorer() {
   const [polygon, setPolygon] = useState<number[][]>([]);
   const [boundary, setBoundary] = useState<FarmBoundarySummary | null>(null);
   const [clouds, setClouds] = useState(30);
+  const [layer, setLayer] = useState<ImageryLayer | null>(null);
+  const [zoom, setZoom] = useState(6.4);
 
   return <div className="satellite-app">
     <div className="satellite-toolbar">
@@ -28,9 +32,9 @@ export default function SatelliteExplorer() {
     </div>
     <div className="satellite-grid">
       <section className={`satellite-map panel ${view === 'analytics' ? 'mobile-hidden' : ''}`}>
-        <FarmMap latitude={location.latitude} longitude={location.longitude} zoom={6.4} drawing onPolygon={(coordinates) => { setPolygon(coordinates); if (!coordinates.length) setBoundary(null); }} onFinish={setBoundary} onLocation={(latitude, longitude) => setLocation({ name: 'Selected point', region: 'Ghana', latitude, longitude })}/>
+        <FarmMap latitude={location.latitude} longitude={location.longitude} zoom={6.4} drawing onPolygon={(coordinates) => { setPolygon(coordinates); if (!coordinates.length) setBoundary(null); }} onFinish={setBoundary} overlay={layer} onZoom={setZoom} onLocation={(latitude, longitude) => setLocation({ name: 'Selected point', region: 'Ghana', latitude, longitude })}/>
         <div className="map-search-float"><LocationSearch compact onSelect={(place: Place) => setLocation(place)} /></div>
-        <div className="imagery-status"><div><strong>Esri satellite basemap</strong><small>Analysis layer not requested</small></div></div>
+        <ImageryLayerPicker layers={imageryLayers} selected={layer} zoom={zoom} onSelect={setLayer} />
       </section>
       <aside className={`satellite-panel panel panel-pad ${view === 'map' ? 'mobile-sheet' : ''}`}>
         {mode === 'crop' && <AreaOverview boundary={boundary} location={location} polygon={polygon} />}
@@ -38,7 +42,7 @@ export default function SatelliteExplorer() {
         {mode === 'ai' && <AiMode polygon={polygon} />}
       </aside>
     </div>
-    {boundary && <BoundarySummary boundary={boundary} title={`Boundary ready near ${location.name}`} locationName={location.name} locationRegion={location.region} imageryNote="Esri satellite basemap; analysis layer is requested separately." />}
+    {boundary && <BoundarySummary boundary={boundary} title={`Boundary ready near ${location.name}`} locationName={location.name} locationRegion={location.region} imageryNote={layer ? `${layer.name} from ${layer.provider} over the Esri satellite basemap.` : 'Esri satellite basemap; analysis layer is requested separately.'} />}
   </div>;
 }
 
