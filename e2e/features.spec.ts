@@ -201,9 +201,30 @@ test('home carousel browses Ghanaian cities and moves the dashboard', async ({ p
   await page.goto('/');
   const carousel = page.getByRole('region', { name: 'Conditions across Ghana' });
   await expect(carousel.getByRole('heading', { name: 'Kumasi' })).toBeVisible();
+  // City readings arrive only after hydration, so controls are live once they show.
+  await expect(carousel.getByText('Rain chance')).toBeVisible();
   await carousel.getByRole('button', { name: 'Next city' }).click();
   await expect(carousel.getByRole('heading', { name: 'Goaso' })).toBeVisible();
   await carousel.getByRole('button', { name: 'Tamale', exact: true }).click();
   await carousel.getByRole('button', { name: 'Show Tamale forecast' }).click();
   await expect(page.locator('.dashboard-side h2')).toHaveText('Tamale');
+});
+
+test('satellite map adds a crop-health layer with a reading guide', async ({ page }) => {
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
+  const esriTiles: string[] = [];
+  await page.route('https://sentinel.arcgis.com/**', (route) => { esriTiles.push(route.request().url()); return route.fulfill({ body: png, contentType: 'image/png' }); });
+  await page.route('https://server.arcgisonline.com/**', (route) => route.fulfill({ body: png, contentType: 'image/png' }));
+  await page.goto('/satellite');
+  const picker = page.getByRole('combobox', { name: /Map layer/ });
+  await expect(picker).toBeVisible();
+  await picker.selectOption({ label: 'Crop health (NDVI)' });
+  const guide = page.getByRole('button', { name: 'How to read this' });
+  if (await guide.getAttribute('aria-expanded') === 'false') await guide.click();
+  await expect(page.getByText(/Green means dense, actively growing plants/)).toBeVisible();
+  await expect(page.getByText('Dense, healthy')).toBeVisible();
+  await expect.poll(() => esriTiles.length).toBeGreaterThan(0);
+  expect(new URL(esriTiles[0]).searchParams.get('renderingRule')).toContain('NDVI Colormap');
+  await picker.selectOption({ label: 'Radar (sees through cloud)' });
+  await expect(page.getByText(/Zoom in to district or field level/)).toBeVisible();
 });

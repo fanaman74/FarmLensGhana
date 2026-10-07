@@ -13,6 +13,7 @@ export interface FarmBoundarySummary {
 }
 
 export interface MapPlace { id: string; name: string; latitude: number; longitude: number; }
+export interface MapOverlay { id: string; tiles: string; opacity: number; attribution: string; minzoom?: number; }
 export interface MapFrame { bounds: [[number, number], [number, number]]; padding: (width: number, height: number) => PaddingOptions; }
 
 interface Props {
@@ -23,6 +24,8 @@ interface Props {
   highlights?: FeatureCollection;
   cropland?: boolean;
   rasterLayer?: { tileUrl: string; bounds: number[]; title: string } | null;
+  /** An external XYZ/WMS imagery layer drawn above the basemap and below the farm boundary. */
+  overlay?: MapOverlay | null;
   onLocation?: (latitude: number, longitude: number) => void;
   onPolygon?: (coordinates: number[][]) => void;
   onFinish?: (summary: FarmBoundarySummary | null) => void;
@@ -33,6 +36,7 @@ interface Props {
   places?: MapPlace[];
   activePlace?: string;
   onPlace?: (id: string) => void;
+  onZoom?: (zoom: number) => void;
 }
 
 const imageryStyle = {
@@ -51,7 +55,7 @@ function distanceKm(a: number[], b: number[]) {
   return 6371 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
-export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false, highlights, cropland = false, rasterLayer, onLocation, onPolygon, onFinish, frame, followLocation = true, places, activePlace, onPlace }: Props) {
+export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false, highlights, cropland = false, rasterLayer, overlay, onLocation, onPolygon, onFinish, frame, followLocation = true, places, activePlace, onPlace, onZoom }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -65,8 +69,8 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
   const [screenPoints, setScreenPoints] = useState<number[][]>([]);
   const [screenCursor, setScreenCursor] = useState<number[] | null>(null);
   const placeMarkers = useRef(new Map<string, Marker>());
-  const callbacks = useRef({ onLocation, onPolygon, onFinish, highlights, onPlace, frame });
-  callbacks.current = { onLocation, onPolygon, onFinish, highlights, onPlace, frame };
+  const callbacks = useRef({ onLocation, onPolygon, onFinish, highlights, onPlace, frame, onZoom });
+  callbacks.current = { onLocation, onPolygon, onFinish, highlights, onPlace, frame, onZoom };
 
   const fitFrame = (map: MapLibreMap, animate: boolean) => {
     const target = callbacks.current.frame;
@@ -126,6 +130,7 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
     });
     map.on('move', () => updatePolygon(map, pointsRef.current));
     map.on('resize', () => updatePolygon(map, pointsRef.current));
+    map.on('zoomend', () => callbacks.current.onZoom?.(map.getZoom()));
     if (callbacks.current.frame) fitFrame(map, false);
     mapRef.current = map;
     setReady(true);
@@ -182,6 +187,16 @@ export default function FarmMap({ latitude, longitude, zoom = 7, drawing = false
       map.fitBounds([[rasterLayer.bounds[0],rasterLayer.bounds[1]],[rasterLayer.bounds[2],rasterLayer.bounds[3]]], { padding: 50, maxZoom: 15 });
     }
   }, [rasterLayer, styleReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !styleReady) return;
+    if (map.getLayer('imagery-overlay')) map.removeLayer('imagery-overlay');
+    if (map.getSource('imagery-overlay')) map.removeSource('imagery-overlay');
+    if (!overlay) return;
+    map.addSource('imagery-overlay', { type: 'raster', tiles: [overlay.tiles], tileSize: 256, minzoom: overlay.minzoom ?? 0, maxzoom: 18, attribution: overlay.attribution });
+    map.addLayer({ id: 'imagery-overlay', type: 'raster', source: 'imagery-overlay', paint: { 'raster-opacity': overlay.opacity } }, 'farm-fill');
+  }, [overlay?.id, styleReady]);
 
   const updatePolygon = (map: MapLibreMap, points: number[][], cursor?: number[]) => {
     // Screen-space feedback remains visible even while WebGL tiles/workers load.
