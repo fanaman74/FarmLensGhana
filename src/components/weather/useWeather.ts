@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { WeatherData } from '../../lib/types';
 import { fetchWeather } from '../../lib/api/fetchWeather';
+import { readSavedLocation, saveLocation } from '../../lib/location/savedLocation';
 
 export interface ActiveLocation { name: string; region?: string; latitude: number; longitude: number; }
 export interface GridComparison {
@@ -11,7 +12,8 @@ export interface GridComparison {
 const locationKey = (latitude: number, longitude: number) => `${latitude},${longitude}`;
 const sameGrid = (a: WeatherData['location'], b: WeatherData['location']) => a.latitude === b.latitude && a.longitude === b.longitude;
 
-export function useWeather(initial: ActiveLocation) {
+/** `fixed` keeps the hook on `initial` (for example a saved farm) instead of the last place chosen elsewhere. */
+export function useWeather(initial: ActiveLocation, { fixed = false }: { fixed?: boolean } = {}) {
   const [location, setLocationState] = useState<ActiveLocation>(initial);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [source, setSource] = useState('Open-Meteo');
@@ -25,10 +27,9 @@ export function useWeather(initial: ActiveLocation) {
   const lastSuccessfulRequest = useRef<{ grid: WeatherData['location']; selection: Pick<ActiveLocation, 'latitude' | 'longitude'> } | null>(null);
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('farmlens-location') ?? 'null');
-      if (saved && typeof saved.name === 'string' && Number.isFinite(saved.latitude) && Number.isFinite(saved.longitude) && saved.latitude >= 4.5 && saved.latitude <= 11.5 && saved.longitude >= -3.5 && saved.longitude <= 1.5) { currentLocationKey.current = locationKey(saved.latitude, saved.longitude); setLocationState(saved); }
-    } catch { /* Storage is optional; preserve the working default. */ }
+    if (fixed) return;
+    const saved = readSavedLocation();
+    if (saved) { currentLocationKey.current = locationKey(saved.latitude, saved.longitude); setLocationState(saved); }
   }, []);
 
   useEffect(() => {
@@ -67,7 +68,7 @@ export function useWeather(initial: ActiveLocation) {
     setWeather(null); setUpdatedAt(''); setError(''); setGridComparison(null); setLoading(true);
     setLocationState(next);
     if (!coordinatesChanged) setRevision((value) => value + 1);
-    try { localStorage.setItem('farmlens-location', JSON.stringify(next)); } catch { /* Browsing without persistent storage is supported. */ }
+    saveLocation(next);
   };
 
   return { location, setLocation, weather, source, updatedAt, loading, error, gridComparison, retry: () => setRevision((value) => value + 1) };

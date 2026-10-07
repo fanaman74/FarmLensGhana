@@ -1,0 +1,8 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import FarmWorkspace from '../components/farm/FarmWorkspace';
+---
+<AppLayout title="My farm" description="Draw your farm once and see its weather, soil, satellite passes and crop guidance in one place.">
+  <header class="satellite-heading"><div><p class="eyebrow">My farm</p><h1>Everything about one field.</h1></div><p>Draw the boundary once. Weather, soil, satellite passes and crop guidance for that farm sit together in the tabs below.</p></header>
+  <FarmWorkspace client:load />
+</AppLayout>

@@ -3,16 +3,26 @@ import { BarChart3, CalendarDays, Cloud, Info, Layers3, Map as MapIcon, ScanLine
 import FarmMap, { type FarmBoundarySummary } from './FarmMap';
 import BoundarySummary from './BoundarySummary';
 import LocationSearch, { type Place } from '../dashboard/LocationSearch';
+import { readSavedLocation, saveLocation } from '../../lib/location/savedLocation';
+import { saveFarm } from '../../lib/location/savedFarm';
 
 type Mode = 'crop' | 'scan' | 'ai';
 type View = 'map' | 'analytics';
 
 export default function SatelliteExplorer() {
   const [ready, setReady] = useState(false);
-  useEffect(() => { setReady(true); }, []);
   const [mode, setMode] = useState<Mode>('crop');
   const [view, setView] = useState<View>('map');
-  const [location, setLocation] = useState({ name: 'Ghana', region: 'National view', latitude: 7.9465, longitude: -1.0232 });
+  const [location, setLocationState] = useState({ name: 'Ghana', region: 'National view', latitude: 7.9465, longitude: -1.0232 });
+  // Open on the place last chosen in any workspace, and share new choices with Weather and Soil.
+  useEffect(() => { const saved = readSavedLocation(); if (saved) setLocationState({ ...saved, region: saved.region ?? 'Ghana' }); setReady(true); }, []);
+  const setLocation = (next: { name: string; region: string; latitude: number; longitude: number }) => { setLocationState(next); saveLocation(next); };
+  const finishBoundary = (summary: FarmBoundarySummary | null) => {
+    setBoundary(summary);
+    if (!summary) return;
+    const farm = saveFarm(summary);
+    setLocationState({ name: farm.name, region: `${summary.centroid.latitude.toFixed(3)}, ${summary.centroid.longitude.toFixed(3)}`, latitude: summary.centroid.latitude, longitude: summary.centroid.longitude });
+  };
   const [polygon, setPolygon] = useState<number[][]>([]);
   const [boundary, setBoundary] = useState<FarmBoundarySummary | null>(null);
   const [clouds, setClouds] = useState(30);
@@ -28,8 +38,8 @@ export default function SatelliteExplorer() {
     </div>
     <div className="satellite-grid">
       <section className={`satellite-map panel ${view === 'analytics' ? 'mobile-hidden' : ''}`}>
-        <FarmMap latitude={location.latitude} longitude={location.longitude} zoom={6.4} drawing onPolygon={(coordinates) => { setPolygon(coordinates); if (!coordinates.length) setBoundary(null); }} onFinish={setBoundary} onLocation={(latitude, longitude) => setLocation({ name: 'Selected point', region: 'Ghana', latitude, longitude })}/>
-        <div className="map-search-float"><LocationSearch compact onSelect={(place: Place) => setLocation(place)} /></div>
+        <FarmMap latitude={location.latitude} longitude={location.longitude} zoom={6.4} focusZoom={13} drawing onPolygon={(coordinates) => { setPolygon(coordinates); if (!coordinates.length) setBoundary(null); }} onFinish={finishBoundary} onLocation={(latitude, longitude) => setLocation({ name: 'Selected point', region: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`, latitude, longitude })}/>
+        <div className="map-search-float"><LocationSearch compact current={location.name === 'Ghana' ? undefined : location.name} onSelect={(place: Place) => setLocation(place)} /></div>
         <div className="imagery-status"><div><strong>Esri satellite basemap</strong><small>Analysis layer not requested</small></div></div>
       </section>
       <aside className={`satellite-panel panel panel-pad ${view === 'map' ? 'mobile-sheet' : ''}`}>
@@ -57,7 +67,7 @@ function AreaOverview({ boundary, location, polygon }: { boundary: FarmBoundaryS
     </div>
     {boundary ? <>
       <div className="provider-note"><strong>Next steps</strong><p>Use the same selected area in Weather for a forecast or Soil for modelled root-zone conditions. Field Scan can search the Sentinel-2 catalogue around the selected location.</p></div>
-      <div className="area-overview-links"><a className="btn btn-primary full-btn" href="/weather">Check weather</a><a className="btn full-btn" href="/soil">Read soil</a></div>
+      <div className="area-overview-links"><a className="btn btn-primary full-btn" href="/farm">Open My farm</a><a className="btn full-btn" href="/weather">Check weather</a><a className="btn full-btn" href="/soil">Read soil</a></div>
     </> : <div className="provider-note"><Info/><p>The completed report will include area, perimeter, corner count, centre coordinates and links to the next analysis tools. The polygon stays in this browser until you choose an analysis action.</p></div>}
   </>;
 }

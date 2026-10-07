@@ -1,26 +1,29 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import LocationSearch, { type Place } from '../dashboard/LocationSearch';
 import FarmMap, { type FarmBoundarySummary } from '../map/FarmMap';
 import BoundarySummary from '../map/BoundarySummary';
 import { crops } from '../../data/crops';
 import RecentScenes from './RecentScenes';
 import EarthEnginePanel, { type EarthLayer } from './EarthEnginePanel';
+import { readSavedLocation, saveLocation } from '../../lib/location/savedLocation';
 
 export default function CropFinder() {
   const [place, setPlace] = useState<Place>();
-  const [query, setQuery] = useState('');
+  const [slug, setSlug] = useState('');
+  // Start from the place last chosen in any workspace; a new search replaces it.
+  useEffect(() => { const saved = readSavedLocation(); if (saved) setPlace({ id: 0, name: saved.name, region: saved.region ?? 'Ghana', latitude: saved.latitude, longitude: saved.longitude }); }, []);
   const [search, setSearch] = useState<{ place: Place; crop: typeof crops[number] }>();
   const [polygon, setPolygon] = useState<number[][]>([]);
   const [boundary, setBoundary] = useState<FarmBoundarySummary | null>(null);
   const [earthLayer, setEarthLayer] = useState<EarthLayer | null>(null);
-  const crop = crops.find(item => item.name.toLowerCase() === query.trim().toLowerCase() || item.slug === query.trim().toLowerCase());
+  const crop = crops.find(item => item.slug === slug);
   return <div className="crop-finder">
     <section className="panel panel-pad finder-form">
-      <div><p className="label">1. Select town / district</p><LocationSearch onSelect={value => { setPlace(value); setSearch(undefined); }} />{place && <p className="meta">Selected: {place.name}, {place.region}</p>}</div>
-      <label><span className="label">2. Enter crop</span><input className="input" list="finder-crops" value={query} placeholder="For example, Maize" onChange={event => { setQuery(event.target.value); setSearch(undefined); }} /><datalist id="finder-crops">{crops.map(item => <option key={item.slug} value={item.name}/>)}</datalist>{query && !crop && <span className="meta">Choose a crop from the suggestions.</span>}</label>
+      <div><p className="label">1. Select town / district</p><LocationSearch current={place?.name} onSelect={value => { setPlace(value); saveLocation(value); setSearch(undefined); }} />{place && <p className="meta">Selected: {place.name}, {place.region}</p>}</div>
+      <label><span className="label">2. Choose crop</span><select className="input" value={slug} onChange={event => { setSlug(event.target.value); setSearch(undefined); }}><option value="" disabled>Select a crop</option>{crops.map(item => <option key={item.slug} value={item.slug}>{item.icon} {item.name}</option>)}</select></label>
       <button className="btn btn-primary" disabled={!place || !crop} onClick={() => { if (place && crop) { setPolygon([]); setBoundary(null); setEarthLayer(null); setSearch({ place, crop }); } }}>Explore crop area</button>
     </section>
-    {!search && <section className="panel panel-pad"><h2>Start with a location and crop</h2><p>Choose a search result to align the imagery to that location. Searches use a place centre, not an official district boundary.</p></section>}
+    {!search && <section className="panel panel-pad"><h2>Start with a location and crop</h2><p>{!place ? 'Search for a town or district, then pick it from the list.' : !crop ? 'Now choose a crop, then select Explore crop area.' : 'Select Explore crop area to open the map.'} Searches use a place centre, not an official district boundary.</p></section>}
     {search && <div className="soil-grid">
       <section className="panel finder-map"><FarmMap key={`${search.place.id}-${search.crop.slug}`} latitude={search.place.latitude} longitude={search.place.longitude} zoom={12} drawing cropland rasterLayer={earthLayer} onPolygon={setPolygon} onFinish={setBoundary} /></section>
       <aside className="panel panel-pad">
