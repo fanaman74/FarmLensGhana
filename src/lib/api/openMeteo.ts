@@ -111,3 +111,69 @@ export async function geocodeGhana(query: string) {
   if (!parsed.success) throw new Error('Invalid geocoding response');
   return (parsed.data.results ?? []).filter((item) => item.country_code === 'GH').map((item) => ({ id: item.id, name: item.name, region: item.admin1 ?? item.admin2 ?? 'Ghana', latitude: item.latitude, longitude: item.longitude }));
 }
+
+const citySnapshotSchema = z.object({
+  latitude: z.number(), longitude: z.number(),
+  current: z.object({
+    time: z.string(), temperature_2m: z.number(), relative_humidity_2m: z.number(), weather_code: z.number(),
+    wind_speed_10m: z.number(), soil_moisture_3_to_9cm: numberOrNull.optional()
+  }),
+  daily: z.object({
+    time: z.array(z.string()), temperature_2m_max: arrayOfNumbers, temperature_2m_min: arrayOfNumbers,
+    precipitation_probability_max: arrayOfNumbers, precipitation_sum: arrayOfNumbers, et0_fao_evapotranspiration: arrayOfNumbers
+  })
+});
+
+export interface CitySnapshot {
+  id: string;
+  observedAt: string;
+  temperature: number;
+  humidity: number;
+  weatherCode: number;
+  windSpeed: number;
+  soilMoisture: number | null;
+  maxTemperature: number | null;
+  minTemperature: number | null;
+  rainChance: number | null;
+  rainToday: number | null;
+  rainWeek: number | null;
+  et0: number | null;
+}
+
+/** Open-Meteo returns one object for a single location and an array for several. */
+export function parseCitySnapshots(ids: string[], payload: unknown): CitySnapshot[] {
+  const list = Array.isArray(payload) ? payload : [payload];
+  if (list.length !== ids.length) throw new Error('City weather response did not match the requested cities');
+  return list.map((item, index) => {
+    const raw = citySnapshotSchema.parse(item);
+    const rain = raw.daily.precipitation_sum.filter((value): value is number => value != null);
+    return {
+      id: ids[index], observedAt: raw.current.time, temperature: raw.current.temperature_2m,
+      humidity: raw.current.relative_humidity_2m, weatherCode: raw.current.weather_code, windSpeed: raw.current.wind_speed_10m,
+      soilMoisture: raw.current.soil_moisture_3_to_9cm ?? null,
+      maxTemperature: raw.daily.temperature_2m_max[0] ?? null, minTemperature: raw.daily.temperature_2m_min[0] ?? null,
+      rainChance: raw.daily.precipitation_probability_max[0] ?? null, rainToday: raw.daily.precipitation_sum[0] ?? null,
+      // A weekly total is only honest when every day reported a value.
+      rainWeek: rain.length === raw.daily.time.length ? rain.reduce((total, value) => total + value, 0) : null,
+      et0: raw.daily.et0_fao_evapotranspiration[0] ?? null,
+    };
+  });
+}
+
+export async function getCitySnapshots(cities: { id: string; latitude: number; longitude: number }[]): Promise<ProviderResult<CitySnapshot[]>> {
+  try {
+    const url = new URL('https://api.open-meteo.com/v1/forecast');
+    url.searchParams.set('latitude', cities.map((city) => city.latitude).join(','));
+    url.searchParams.set('longitude', cities.map((city) => city.longitude).join(','));
+    url.searchParams.set('timezone', 'Africa/Accra');
+    url.searchParams.set('forecast_days', '7');
+    url.searchParams.set('current', 'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,soil_moisture_3_to_9cm');
+    url.searchParams.set('daily', 'temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,et0_fao_evapotranspiration');
+    const data = parseCitySnapshots(cities.map((city) => city.id), await fetchJson(url, 12000));
+    return { ok: true, data, source: 'Open-Meteo', fetchedAt: new Date().toISOString() };
+  } catch (error) {
+    const isTimeout = error instanceof DOMException && error.name === 'TimeoutError';
+    if (error instanceof z.ZodError) return { ok: false, error: { code: 'missing_data', message: 'The weather provider returned incomplete city data.', retryable: true } };
+    return { ok: false, error: { code: isTimeout ? 'timeout' : 'unavailable', message: isTimeout ? 'City weather request timed out.' : 'City weather is temporarily unavailable.', retryable: true } };
+  }
+}
